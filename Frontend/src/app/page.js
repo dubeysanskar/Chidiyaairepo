@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
+import { RollingTextList } from "@/components/ui/rolling-list";
+import { MagneticText } from "@/components/ui/morphing-cursor";
+import { RatingInteraction } from "@/components/ui/emoji-rating";
 
 // Animated counter component
 function AnimatedCounter({ end, duration = 2000, suffix = "" }) {
@@ -132,21 +135,13 @@ export default function Home() {
 
         <div style={{ maxWidth: "1100px", margin: "0 auto", padding: "0 24px", position: "relative", zIndex: 1 }}>
           <div style={{ textAlign: "center", maxWidth: "800px", margin: "0 auto" }}>
-            <h1 style={{
-              fontSize: "56px",
-              fontWeight: "700",
-              color: "#0f172a",
-              lineHeight: "1.1",
-              marginBottom: "24px",
-              letterSpacing: "-1px"
-            }}>
-              Find Verified Suppliers<br />
-              <span style={{
-                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent"
-              }}>10x Faster</span>
-            </h1>
+            {/* Hero Text with MagneticText */}
+            <div style={{ marginBottom: "40px" }}>
+              <div className="flex flex-col items-center gap-4">
+                <MagneticText text="Source" hoverText="Discover" />
+                <MagneticText text="Smarter" hoverText="Faster" />
+              </div>
+            </div>
             <p style={{ fontSize: "20px", color: "#64748b", marginBottom: "40px", lineHeight: "1.6" }}>
               ChidiyaAI is your AI-powered B2B sourcing partner. Get matched with verified wholesalers, compare prices, and close deals — all in one place.
             </p>
@@ -346,39 +341,10 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section - ROI Focus */}
+      {/* Features Section - Rolling Text List */}
       <section id="features" style={{ padding: "100px 24px", backgroundColor: "white" }}>
-        <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
-          <div style={{ textAlign: "center", marginBottom: "60px" }}>
-            <h2 style={{ fontSize: "40px", fontWeight: "bold", color: "#0f172a", marginBottom: "16px" }}>
-              What you get with ChidiyayaAI
-            </h2>
-            <p style={{ fontSize: "18px", color: "#64748b" }}>
-              Better than IndiaMart. Faster, smarter, and verified.
-            </p>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "24px" }}>
-            {[
-              { icon: "🛡️", title: "100% Verified", desc: "Every supplier is GST-verified and vetted by our team." },
-              { icon: "💰", title: "Save ₹50K+ Monthly", desc: "Our users save an average of ₹50,000 per month on sourcing." },
-              { icon: "⚡", title: "10x Faster Matching", desc: "Get matched in minutes, not days. AI does the heavy lifting." },
-              { icon: "🔔", title: "Price Drop Alerts", desc: "Never miss a deal. Get notified when prices drop." },
-              { icon: "📊", title: "Compare Instantly", desc: "Side-by-side price and quality comparisons." },
-              { icon: "🔒", title: "Privacy First", desc: "Your data is never sold. Direct supplier connections." }
-            ].map((item, i) => (
-              <div key={i} style={{
-                backgroundColor: "#f8fafc",
-                borderRadius: "16px",
-                padding: "28px",
-                transition: "all 0.3s ease"
-              }}>
-                <div style={{ fontSize: "32px", marginBottom: "16px" }}>{item.icon}</div>
-                <h3 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a", marginBottom: "8px" }}>{item.title}</h3>
-                <p style={{ fontSize: "14px", color: "#64748b", lineHeight: "1.6", margin: 0 }}>{item.desc}</p>
-              </div>
-            ))}
-          </div>
+        <div style={{ maxWidth: "1000px", margin: "0 auto", display: "flex", justifyContent: "center", alignItems: "center" }}>
+          <RollingTextList />
         </div>
       </section>
 
@@ -654,12 +620,22 @@ export default function Home() {
             Ready to transform your B2B sourcing?
           </h2>
           <p style={{ fontSize: "18px", color: "#94a3b8", marginBottom: "32px" }}>
-            Join hundreds of businesses saving time and money with ChidiyayaAI
+            Join hundreds of businesses saving time and money with ChidiyaAI
           </p>
           <div style={{ display: "flex", justifyContent: "center", gap: "16px" }}>
             <Link href="/onboarding" style={{ backgroundColor: "white", color: "#0f172a", padding: "16px 32px", borderRadius: "8px", textDecoration: "none", fontWeight: "500" }}>Get Started Free</Link>
             <Link href="/contact" style={{ border: "1px solid #475569", color: "white", padding: "16px 32px", borderRadius: "8px", textDecoration: "none", fontWeight: "500" }}>Talk to Sales</Link>
           </div>
+        </div>
+      </section>
+
+      {/* Rating Section */}
+      <section style={{ padding: "60px 24px", backgroundColor: "white", borderTop: "1px solid #e2e8f0" }}>
+        <div style={{ maxWidth: "500px", margin: "0 auto", textAlign: "center" }}>
+          <p style={{ fontSize: "12px", fontWeight: "500", textTransform: "uppercase", letterSpacing: "0.2em", color: "#94a3b8", marginBottom: "24px" }}>
+            How was your experience?
+          </p>
+          <RatingInteraction />
         </div>
       </section>
 
