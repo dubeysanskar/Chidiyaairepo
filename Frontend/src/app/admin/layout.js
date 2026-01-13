@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import "./admin.css";
 
 const navItems = [
     { id: "dashboard", label: "Dashboard", icon: "📊", href: "/admin/dashboard" },
@@ -15,47 +16,16 @@ const navItems = [
 export default function AdminLayout({ children }) {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-    const [windowWidth, setWindowWidth] = useState(1024);
-
-    useEffect(() => {
-        // Set initial width
-        setWindowWidth(window.innerWidth);
-
-        const handleResize = () => {
-            setWindowWidth(window.innerWidth);
-        };
-
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
 
     // Don't show layout on login page
     if (pathname === "/admin") {
         return children;
     }
 
-    const isMobile = windowWidth < 768;
-
     return (
-        <div style={{
-            minHeight: "100vh",
-            display: "flex",
-            backgroundColor: "#0f172a",
-            fontFamily: "'Inter', system-ui, sans-serif"
-        }}>
-            {/* Desktop Sidebar - only render when not mobile */}
-            <aside style={{
-                width: "260px",
-                backgroundColor: "#1e293b",
-                padding: "24px 16px",
-                position: "fixed",
-                top: 0,
-                left: 0,
-                bottom: 0,
-                display: isMobile ? "none" : "flex",
-                flexDirection: "column",
-                zIndex: 40
-            }}>
+        <div className="admin-layout-container">
+            {/* Desktop Sidebar */}
+            <aside className="admin-sidebar-desktop">
                 {/* Logo */}
                 <div style={{ marginBottom: "32px", paddingLeft: "12px" }}>
                     <Link href="/admin/dashboard" style={{ textDecoration: "none" }}>
@@ -150,18 +120,7 @@ export default function AdminLayout({ children }) {
             </aside>
 
             {/* Mobile Header */}
-            <header style={{
-                position: "fixed",
-                top: 0,
-                left: 0,
-                right: 0,
-                backgroundColor: "#1e293b",
-                padding: "12px 16px",
-                zIndex: 50,
-                display: isMobile ? "flex" : "none",
-                alignItems: "center",
-                justifyContent: "space-between"
-            }}>
+            <header className="admin-header-mobile">
                 <Link href="/admin/dashboard" style={{ textDecoration: "none" }}>
                     <span style={{ fontSize: "18px", fontWeight: "bold", color: "white" }}>
                         Chidiya<span style={{ color: "#3b82f6" }}>AI</span>
@@ -190,68 +149,64 @@ export default function AdminLayout({ children }) {
             </header>
 
             {/* Mobile Menu Dropdown */}
-            <div style={{
-                position: "fixed",
-                top: "56px",
-                left: 0,
-                right: 0,
-                bottom: 0,
-                backgroundColor: "#1e293b",
-                zIndex: 49,
-                padding: "16px",
-                overflowY: "auto",
-                display: isMobile && mobileMenuOpen ? "block" : "none"
-            }}>
-                {navItems.map((item) => {
-                    const isActive = pathname === item.href;
-                    return (
+            {mobileMenuOpen && (
+                <div style={{
+                    position: "fixed",
+                    top: "56px",
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    backgroundColor: "#1e293b",
+                    zIndex: 49,
+                    padding: "16px",
+                    overflowY: "auto"
+                }}>
+                    {navItems.map((item) => {
+                        const isActive = pathname === item.href;
+                        return (
+                            <Link
+                                key={item.id}
+                                href={item.href}
+                                onClick={() => setMobileMenuOpen(false)}
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "12px",
+                                    padding: "16px",
+                                    marginBottom: "8px",
+                                    borderRadius: "8px",
+                                    textDecoration: "none",
+                                    backgroundColor: isActive ? "rgba(59,130,246,0.15)" : "transparent",
+                                    color: isActive ? "#3b82f6" : "#94a3b8",
+                                    fontSize: "16px"
+                                }}
+                            >
+                                <span style={{ fontSize: "20px" }}>{item.icon}</span>
+                                {item.label}
+                            </Link>
+                        );
+                    })}
+                    <div style={{ borderTop: "1px solid #334155", marginTop: "16px", paddingTop: "16px" }}>
                         <Link
-                            key={item.id}
-                            href={item.href}
-                            onClick={() => setMobileMenuOpen(false)}
+                            href="/admin"
                             style={{
-                                display: "flex",
-                                alignItems: "center",
-                                gap: "12px",
-                                padding: "16px",
-                                marginBottom: "8px",
+                                display: "block",
+                                padding: "14px",
+                                backgroundColor: "#334155",
                                 borderRadius: "8px",
+                                color: "#94a3b8",
                                 textDecoration: "none",
-                                backgroundColor: isActive ? "rgba(59,130,246,0.15)" : "transparent",
-                                color: isActive ? "#3b82f6" : "#94a3b8",
-                                fontSize: "16px"
+                                textAlign: "center"
                             }}
                         >
-                            <span style={{ fontSize: "20px" }}>{item.icon}</span>
-                            {item.label}
+                            Sign Out
                         </Link>
-                    );
-                })}
-                <div style={{ borderTop: "1px solid #334155", marginTop: "16px", paddingTop: "16px" }}>
-                    <Link
-                        href="/admin"
-                        style={{
-                            display: "block",
-                            padding: "14px",
-                            backgroundColor: "#334155",
-                            borderRadius: "8px",
-                            color: "#94a3b8",
-                            textDecoration: "none",
-                            textAlign: "center"
-                        }}
-                    >
-                        Sign Out
-                    </Link>
+                    </div>
                 </div>
-            </div>
+            )}
 
             {/* Main Content */}
-            <main style={{
-                flex: 1,
-                marginLeft: isMobile ? 0 : "260px",
-                padding: isMobile ? "72px 16px 16px" : "24px",
-                minHeight: "100vh"
-            }}>
+            <main className="admin-content-main">
                 {children}
             </main>
         </div>

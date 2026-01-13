@@ -1,0 +1,162 @@
+/* Admin Panel Styles - Imported directly to avoid Tailwind conflicts */
+/* Using very specific selectors and !important to override any conflicts */
+
+/* Desktop Layout */
+.admin-layout-container {
+    min-height: 100vh !important;
+    display: flex !important;
+    background-color: #0f172a !important;
+    font-family: 'Inter', system-ui, sans-serif !important;
+}
+
+/* Sidebar - visible by default on desktop */
+.admin-sidebar-desktop {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 260px !important;
+    background-color: #1e293b !important;
+    padding: 24px 16px !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    bottom: 0 !important;
+    z-index: 40 !important;
+}
+
+/* Mobile Header - HIDDEN by default on desktop */
+.admin-header-mobile {
+    display: none !important;
+}
+
+/* Main Content - with sidebar margin on desktop */
+.admin-content-main {
+    margin-left: 260px !important;
+    padding: 24px !important;
+    min-height: 100vh !important;
+    flex: 1 !important;
+}
+
+/* Stats Grid - 4 columns on desktop */
+.admin-stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(4, 1fr) !important;
+    gap: 16px !important;
+}
+
+/* Cards Grid - 3 columns on desktop */
+.admin-cards-grid {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 16px !important;
+}
+
+/* Two Column Grid on desktop */
+.admin-two-col {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 24px !important;
+}
+
+/* Flex Row on desktop */
+.admin-row {
+    display: flex !important;
+    flex-direction: row !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    gap: 12px !important;
+}
+
+/* Filter Row on desktop */
+.admin-filters {
+    display: flex !important;
+    flex-direction: row !important;
+    gap: 12px !important;
+}
+
+/* Page Title */
+.admin-title {
+    font-size: 28px !important;
+    font-weight: bold !important;
+    color: white !important;
+    margin-bottom: 4px !important;
+}
+
+/* ============================================= */
+/* MOBILE STYLES - screens 767px and below      */
+/* ============================================= */
+@media screen and (max-width: 767px) {
+
+    /* HIDE sidebar on mobile */
+    .admin-sidebar-desktop {
+        display: none !important;
+        visibility: hidden !important;
+        width: 0 !important;
+        opacity: 0 !important;
+    }
+
+    /* SHOW mobile header */
+    .admin-header-mobile {
+        display: flex !important;
+        visibility: visible !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        background-color: #1e293b !important;
+        padding: 12px 16px !important;
+        z-index: 50 !important;
+        align-items: center !important;
+        justify-content: space-between !important;
+    }
+
+    /* Remove sidebar margin and add top padding for header */
+    .admin-content-main {
+        margin-left: 0 !important;
+        padding: 72px 16px 16px 16px !important;
+    }
+
+    /* Stats become 2 columns on mobile */
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    /* Cards become 2 columns on mobile */
+    .admin-cards-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: 12px !important;
+    }
+
+    /* Two column becomes 1 column on mobile */
+    .admin-two-col {
+        grid-template-columns: 1fr !important;
+        gap: 16px !important;
+    }
+
+    /* Row becomes column on mobile */
+    .admin-row {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+
+    /* Filters stack on mobile */
+    .admin-filters {
+        flex-direction: column !important;
+    }
+
+    /* Smaller title on mobile */
+    .admin-title {
+        font-size: 22px !important;
+    }
+}
+
+/* Extra small screens */
+@media screen and (max-width: 480px) {
+    .admin-content-main {
+        padding: 68px 12px 12px 12px !important;
+    }
+
+    .admin-stats-grid {
+        gap: 8px !important;
+    }
+}

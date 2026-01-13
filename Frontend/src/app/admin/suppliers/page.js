@@ -1,68 +1,33 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
-// Mock data
 const mockSuppliers = [
-    { id: 1, name: "Premium Textile Corp", gst: "27AAACP1234A1ZE", email: "contact@premiumtextile.com", phone: "+91 98765 43210", category: "Textiles", status: "pending", badges: [], rating: 0, documents: ["GST Certificate", "PAN Card"], appliedAt: "2 hours ago" },
-    { id: 2, name: "Excel Manufacturing", gst: "24AABCE5678F1ZK", email: "info@excelmanufacturing.com", phone: "+91 87654 32109", category: "Electronics", status: "approved", badges: ["gst", "premium"], rating: 4.8, documents: ["GST Certificate", "ISO Certification"], appliedAt: "5 days ago" },
-    { id: 3, name: "Quality Fabrics Ltd", gst: "27AABCQ1122G1ZM", email: "sales@qualityfabrics.in", phone: "+91 76543 21098", category: "Textiles", status: "approved", badges: ["gst", "top_seller", "fast_response"], rating: 4.6, documents: ["GST Certificate"], appliedAt: "10 days ago" },
-    { id: 4, name: "Fake Corp Industries", gst: "INVALID123", email: "fake@example.com", phone: "+91 11111 11111", category: "Chemicals", status: "suspended", badges: [], rating: 1.2, documents: [], appliedAt: "1 month ago" },
-    { id: 5, name: "Banned Traders", gst: "00FRAUD00000Z", email: "banned@scam.com", phone: "+91 00000 00000", category: "Packaging", status: "banned", badges: [], rating: 0, documents: [], appliedAt: "2 months ago" },
+    { id: 1, name: "Premium Textile Corp", gst: "27AAACP1234A1ZE", email: "contact@premiumtextile.com", phone: "+91 98765 43210", category: "Textiles", status: "pending", badges: [], documents: ["GST Certificate", "PAN Card"] },
+    { id: 2, name: "Excel Manufacturing", gst: "24AABCE5678F1ZK", email: "info@excel.com", phone: "+91 87654 32109", category: "Electronics", status: "approved", badges: ["gst", "premium"], documents: ["GST Certificate"] },
+    { id: 3, name: "Quality Fabrics", gst: "27AABCQ1122G1ZM", email: "sales@quality.in", phone: "+91 76543 21098", category: "Textiles", status: "approved", badges: ["gst"], documents: ["GST Certificate"] },
+    { id: 4, name: "Fake Corp", gst: "INVALID123", email: "fake@example.com", phone: "+91 11111 11111", category: "Chemicals", status: "suspended", badges: [], documents: [] },
 ];
 
 const badgeTypes = [
-    { id: "gst", label: "GST Verified", icon: "✓", color: "#22c55e" },
-    { id: "premium", label: "Premium", icon: "★", color: "#3b82f6" },
-    { id: "top_seller", label: "Top Seller", icon: "🏆", color: "#f59e0b" },
-    { id: "fast_response", label: "Fast Response", icon: "⚡", color: "#8b5cf6" },
-    { id: "trusted", label: "Trusted", icon: "🛡️", color: "#14b8a6" },
+    { id: "gst", label: "GST ✓", color: "#22c55e" },
+    { id: "premium", label: "Premium ★", color: "#3b82f6" },
 ];
 
-const tabs = [
-    { id: "pending", label: "Pending", count: 1 },
-    { id: "approved", label: "Approved", count: 2 },
-    { id: "suspended", label: "Suspended", count: 1 },
-    { id: "banned", label: "Banned", count: 1 },
-];
+const tabs = ["pending", "approved", "suspended", "banned"];
 
 export default function SuppliersPage() {
     const [activeTab, setActiveTab] = useState("pending");
     const [suppliers, setSuppliers] = useState(mockSuppliers);
-    const [selectedSupplier, setSelectedSupplier] = useState(null);
-    const [showBadgeModal, setShowBadgeModal] = useState(false);
-    const [windowWidth, setWindowWidth] = useState(1024);
 
-    useEffect(() => {
-        setWindowWidth(window.innerWidth);
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const isMobile = windowWidth < 768;
     const filteredSuppliers = suppliers.filter(s => s.status === activeTab);
 
-    const handleAction = (supplierId, action) => {
+    const handleAction = (id, action) => {
         setSuppliers(suppliers.map(s => {
-            if (s.id === supplierId) {
+            if (s.id === id) {
                 if (action === "approve") return { ...s, status: "approved" };
                 if (action === "suspend") return { ...s, status: "suspended" };
-                if (action === "ban") return { ...s, status: "banned" };
                 if (action === "restore") return { ...s, status: "approved" };
-            }
-            return s;
-        }));
-    };
-
-    const toggleBadge = (supplierId, badgeId) => {
-        setSuppliers(suppliers.map(s => {
-            if (s.id === supplierId) {
-                const hasBadge = s.badges.includes(badgeId);
-                return {
-                    ...s,
-                    badges: hasBadge ? s.badges.filter(b => b !== badgeId) : [...s.badges, badgeId]
-                };
             }
             return s;
         }));
@@ -70,320 +35,110 @@ export default function SuppliersPage() {
 
     return (
         <div>
+            <style dangerouslySetInnerHTML={{
+                __html: `
+                .sup-page { padding: 0; }
+                .sup-title { font-size: 24px; font-weight: bold; color: white; margin-bottom: 4px; }
+                .sup-tabs { display: flex; gap: 8px; margin-bottom: 20px; overflow-x: auto; padding-bottom: 8px; }
+                .sup-tab { padding: 10px 16px; border-radius: 8px; font-size: 14px; white-space: nowrap; cursor: pointer; border: 1px solid #334155; background: #1e293b; color: #94a3b8; }
+                .sup-tab.active { background: #3b82f6; border-color: #3b82f6; color: white; }
+                .sup-card { background: #1e293b; border-radius: 12px; border: 1px solid #334155; margin-bottom: 16px; overflow: hidden; }
+                .sup-card-header { padding: 16px; border-bottom: 1px solid #334155; }
+                .sup-card-name { font-size: 18px; font-weight: 600; color: white; margin-bottom: 8px; }
+                .sup-card-meta { font-size: 13px; color: #94a3b8; margin-bottom: 12px; }
+                .sup-card-badges { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+                .sup-card-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+                .sup-card-details { padding: 16px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+                .sup-detail-item { }
+                .sup-detail-label { font-size: 11px; color: #64748b; text-transform: uppercase; margin-bottom: 2px; }
+                .sup-detail-value { font-size: 14px; color: white; word-break: break-all; }
+                .sup-btn { padding: 8px 16px; border-radius: 6px; font-size: 13px; cursor: pointer; border: none; }
+                .sup-btn-approve { background: #22c55e; color: white; }
+                .sup-btn-reject { background: transparent; color: #ef4444; border: 1px solid #ef4444; }
+                .sup-btn-restore { background: #22c55e20; color: #22c55e; border: 1px solid #22c55e; }
+                .sup-empty { background: #1e293b; border-radius: 12px; padding: 40px; text-align: center; color: #64748b; }
+                
+                @media (min-width: 768px) {
+                    .sup-title { font-size: 28px; }
+                    .sup-card-details { flex-direction: row; gap: 24px; }
+                    .sup-detail-item { flex: 1; }
+                }
+            `}} />
+
             {/* Header */}
-            <div style={{ marginBottom: "24px" }}>
-                <h1 style={{ fontSize: isMobile ? "24px" : "28px", fontWeight: "bold", color: "white", marginBottom: "4px" }}>
-                    Supplier Management
-                </h1>
-                <p style={{ color: "#64748b", fontSize: "14px" }}>
-                    Approve, manage, and award badges to suppliers
-                </p>
+            <div style={{ marginBottom: "20px" }}>
+                <h1 className="sup-title">Supplier Management</h1>
+                <p style={{ color: "#64748b", fontSize: "14px" }}>Approve, manage, and award badges</p>
             </div>
 
             {/* Tabs */}
-            <div style={{
-                display: "flex",
-                gap: "8px",
-                marginBottom: "24px",
-                overflowX: "auto",
-                paddingBottom: "8px"
-            }}>
+            <div className="sup-tabs">
                 {tabs.map((tab) => (
                     <button
-                        key={tab.id}
-                        onClick={() => setActiveTab(tab.id)}
-                        style={{
-                            padding: "10px 20px",
-                            backgroundColor: activeTab === tab.id ? "#3b82f6" : "#1e293b",
-                            color: activeTab === tab.id ? "white" : "#94a3b8",
-                            border: "1px solid",
-                            borderColor: activeTab === tab.id ? "#3b82f6" : "#334155",
-                            borderRadius: "8px",
-                            fontSize: "14px",
-                            fontWeight: "500",
-                            cursor: "pointer",
-                            whiteSpace: "nowrap",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "8px"
-                        }}
+                        key={tab}
+                        onClick={() => setActiveTab(tab)}
+                        className={`sup-tab ${activeTab === tab ? "active" : ""}`}
                     >
-                        {tab.label}
-                        <span style={{
-                            padding: "2px 8px",
-                            backgroundColor: activeTab === tab.id ? "rgba(255,255,255,0.2)" : "#334155",
-                            borderRadius: "10px",
-                            fontSize: "12px"
-                        }}>
-                            {suppliers.filter(s => s.status === tab.id).length}
-                        </span>
+                        {tab.charAt(0).toUpperCase() + tab.slice(1)} ({suppliers.filter(s => s.status === tab).length})
                     </button>
                 ))}
             </div>
 
             {/* Supplier Cards */}
-            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                {filteredSuppliers.length === 0 ? (
-                    <div style={{
-                        backgroundColor: "#1e293b",
-                        borderRadius: "12px",
-                        padding: "48px",
-                        textAlign: "center",
-                        color: "#64748b"
-                    }}>
-                        No suppliers in this category
-                    </div>
-                ) : (
-                    filteredSuppliers.map((supplier) => (
-                        <div key={supplier.id} style={{
-                            backgroundColor: "#1e293b",
-                            borderRadius: "12px",
-                            border: "1px solid #334155",
-                            overflow: "hidden"
-                        }}>
-                            {/* Card Header */}
-                            <div style={{
-                                padding: isMobile ? "16px" : "20px",
-                                borderBottom: "1px solid #334155"
-                            }}>
-                                <div style={{
-                                    display: "flex",
-                                    justifyContent: "space-between",
-                                    alignItems: isMobile ? "flex-start" : "center",
-                                    flexDirection: isMobile ? "column" : "row",
-                                    gap: "12px"
-                                }}>
-                                    <div>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
-                                            <h3 style={{ fontSize: "18px", fontWeight: "600", color: "white" }}>
-                                                {supplier.name}
-                                            </h3>
-                                            {/* Badges */}
-                                            {supplier.badges.map((badgeId) => {
-                                                const badge = badgeTypes.find(b => b.id === badgeId);
-                                                return badge ? (
-                                                    <span key={badgeId} style={{
-                                                        padding: "2px 8px",
-                                                        backgroundColor: `${badge.color}20`,
-                                                        color: badge.color,
-                                                        borderRadius: "10px",
-                                                        fontSize: "11px",
-                                                        fontWeight: "500"
-                                                    }}>
-                                                        {badge.icon} {badge.label}
-                                                    </span>
-                                                ) : null;
-                                            })}
-                                        </div>
-                                        <div style={{ display: "flex", gap: "16px", marginTop: "8px", fontSize: "13px", color: "#94a3b8", flexWrap: "wrap" }}>
-                                            <span>GST: {supplier.gst}</span>
-                                            <span>Category: {supplier.category}</span>
-                                            {supplier.rating > 0 && <span>Rating: ★ {supplier.rating}</span>}
-                                        </div>
-                                    </div>
-                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                                        {/* Actions based on status */}
-                                        {supplier.status === "pending" && (
-                                            <>
-                                                <button onClick={() => handleAction(supplier.id, "approve")} style={{
-                                                    padding: "8px 16px",
-                                                    backgroundColor: "#22c55e",
-                                                    color: "white",
-                                                    border: "none",
-                                                    borderRadius: "6px",
-                                                    fontSize: "13px",
-                                                    fontWeight: "500",
-                                                    cursor: "pointer"
-                                                }}>
-                                                    Approve
-                                                </button>
-                                                <button onClick={() => handleAction(supplier.id, "ban")} style={{
-                                                    padding: "8px 16px",
-                                                    backgroundColor: "#334155",
-                                                    color: "#ef4444",
-                                                    border: "1px solid #ef4444",
-                                                    borderRadius: "6px",
-                                                    fontSize: "13px",
-                                                    cursor: "pointer"
-                                                }}>
-                                                    Reject
-                                                </button>
-                                            </>
-                                        )}
-                                        {supplier.status === "approved" && (
-                                            <>
-                                                <button onClick={() => { setSelectedSupplier(supplier); setShowBadgeModal(true); }} style={{
-                                                    padding: "8px 16px",
-                                                    backgroundColor: "#3b82f620",
-                                                    color: "#3b82f6",
-                                                    border: "1px solid #3b82f6",
-                                                    borderRadius: "6px",
-                                                    fontSize: "13px",
-                                                    cursor: "pointer"
-                                                }}>
-                                                    🏅 Badges
-                                                </button>
-                                                <button onClick={() => handleAction(supplier.id, "suspend")} style={{
-                                                    padding: "8px 16px",
-                                                    backgroundColor: "#334155",
-                                                    color: "#f59e0b",
-                                                    border: "1px solid #f59e0b",
-                                                    borderRadius: "6px",
-                                                    fontSize: "13px",
-                                                    cursor: "pointer"
-                                                }}>
-                                                    Suspend
-                                                </button>
-                                            </>
-                                        )}
-                                        {(supplier.status === "suspended" || supplier.status === "banned") && (
-                                            <button onClick={() => handleAction(supplier.id, "restore")} style={{
-                                                padding: "8px 16px",
-                                                backgroundColor: "#22c55e20",
-                                                color: "#22c55e",
-                                                border: "1px solid #22c55e",
-                                                borderRadius: "6px",
-                                                fontSize: "13px",
-                                                cursor: "pointer"
-                                            }}>
-                                                Restore
-                                            </button>
-                                        )}
-                                    </div>
+            {filteredSuppliers.length === 0 ? (
+                <div className="sup-empty">No suppliers in this category</div>
+            ) : (
+                filteredSuppliers.map((supplier) => (
+                    <div key={supplier.id} className="sup-card">
+                        <div className="sup-card-header">
+                            <div className="sup-card-name">{supplier.name}</div>
+
+                            {supplier.badges.length > 0 && (
+                                <div className="sup-card-badges">
+                                    {supplier.badges.map((badgeId) => {
+                                        const badge = badgeTypes.find(b => b.id === badgeId);
+                                        return badge ? (
+                                            <span key={badgeId} style={{ padding: "3px 10px", backgroundColor: `${badge.color}20`, color: badge.color, borderRadius: "12px", fontSize: "12px" }}>
+                                                {badge.label}
+                                            </span>
+                                        ) : null;
+                                    })}
                                 </div>
+                            )}
+
+                            <div className="sup-card-meta">
+                                GST: {supplier.gst} • {supplier.category}
                             </div>
 
-                            {/* Card Details */}
-                            <div style={{
-                                padding: isMobile ? "16px" : "20px",
-                                display: "grid",
-                                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-                                gap: "16px"
-                            }}>
-                                <div>
-                                    <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Email</div>
-                                    <div style={{ color: "white", fontSize: "14px" }}>{supplier.email}</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Phone</div>
-                                    <div style={{ color: "white", fontSize: "14px" }}>{supplier.phone}</div>
-                                </div>
-                                <div>
-                                    <div style={{ fontSize: "12px", color: "#64748b", marginBottom: "4px" }}>Documents</div>
-                                    <div style={{ color: "white", fontSize: "14px" }}>
-                                        {supplier.documents.length > 0 ? supplier.documents.join(", ") : "None submitted"}
-                                    </div>
-                                </div>
+                            <div className="sup-card-actions">
+                                {supplier.status === "pending" && (
+                                    <>
+                                        <button onClick={() => handleAction(supplier.id, "approve")} className="sup-btn sup-btn-approve">Approve</button>
+                                        <button onClick={() => handleAction(supplier.id, "suspend")} className="sup-btn sup-btn-reject">Reject</button>
+                                    </>
+                                )}
+                                {(supplier.status === "suspended" || supplier.status === "banned") && (
+                                    <button onClick={() => handleAction(supplier.id, "restore")} className="sup-btn sup-btn-restore">Restore</button>
+                                )}
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
 
-            {/* Badge Modal */}
-            {showBadgeModal && selectedSupplier && (
-                <div style={{
-                    position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0,0,0,0.7)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 100,
-                    padding: "20px"
-                }}>
-                    <div style={{
-                        backgroundColor: "#1e293b",
-                        borderRadius: "16px",
-                        padding: "24px",
-                        width: "100%",
-                        maxWidth: "400px"
-                    }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "20px" }}>
-                            <h3 style={{ color: "white", fontSize: "18px", fontWeight: "600" }}>
-                                Manage Badges
-                            </h3>
-                            <button onClick={() => { setShowBadgeModal(false); setSelectedSupplier(null); }} style={{
-                                background: "none",
-                                border: "none",
-                                color: "#64748b",
-                                fontSize: "24px",
-                                cursor: "pointer"
-                            }}>
-                                ×
-                            </button>
+                        <div className="sup-card-details">
+                            <div className="sup-detail-item">
+                                <div className="sup-detail-label">Email</div>
+                                <div className="sup-detail-value">{supplier.email}</div>
+                            </div>
+                            <div className="sup-detail-item">
+                                <div className="sup-detail-label">Phone</div>
+                                <div className="sup-detail-value">{supplier.phone}</div>
+                            </div>
+                            <div className="sup-detail-item" style={{ gridColumn: "span 2" }}>
+                                <div className="sup-detail-label">Documents</div>
+                                <div className="sup-detail-value">{supplier.documents.length > 0 ? supplier.documents.join(", ") : "None"}</div>
+                            </div>
                         </div>
-                        <p style={{ color: "#94a3b8", fontSize: "14px", marginBottom: "20px" }}>
-                            {selectedSupplier.name}
-                        </p>
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
-                            {badgeTypes.map((badge) => {
-                                const hasBadge = selectedSupplier.badges.includes(badge.id);
-                                return (
-                                    <button
-                                        key={badge.id}
-                                        onClick={() => {
-                                            toggleBadge(selectedSupplier.id, badge.id);
-                                            setSelectedSupplier({
-                                                ...selectedSupplier,
-                                                badges: hasBadge
-                                                    ? selectedSupplier.badges.filter(b => b !== badge.id)
-                                                    : [...selectedSupplier.badges, badge.id]
-                                            });
-                                        }}
-                                        style={{
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "space-between",
-                                            padding: "14px 16px",
-                                            backgroundColor: hasBadge ? `${badge.color}20` : "#0f172a",
-                                            border: `1px solid ${hasBadge ? badge.color : "#334155"}`,
-                                            borderRadius: "8px",
-                                            cursor: "pointer",
-                                            textAlign: "left"
-                                        }}
-                                    >
-                                        <span style={{ color: "white", display: "flex", alignItems: "center", gap: "10px" }}>
-                                            <span style={{ fontSize: "18px" }}>{badge.icon}</span>
-                                            {badge.label}
-                                        </span>
-                                        <span style={{
-                                            width: "24px",
-                                            height: "24px",
-                                            borderRadius: "6px",
-                                            backgroundColor: hasBadge ? badge.color : "transparent",
-                                            border: `2px solid ${badge.color}`,
-                                            display: "flex",
-                                            alignItems: "center",
-                                            justifyContent: "center",
-                                            color: "white",
-                                            fontSize: "14px"
-                                        }}>
-                                            {hasBadge && "✓"}
-                                        </span>
-                                    </button>
-                                );
-                            })}
-                        </div>
-                        <button onClick={() => { setShowBadgeModal(false); setSelectedSupplier(null); }} style={{
-                            width: "100%",
-                            marginTop: "20px",
-                            padding: "14px",
-                            backgroundColor: "#3b82f6",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "8px",
-                            fontSize: "15px",
-                            fontWeight: "500",
-                            cursor: "pointer"
-                        }}>
-                            Done
-                        </button>
                     </div>
-                </div>
+                ))
             )}
         </div>
     );

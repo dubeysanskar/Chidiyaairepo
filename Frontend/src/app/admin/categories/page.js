@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 // Mock data
 const mockCategories = [
@@ -25,17 +25,6 @@ export default function CategoriesPage() {
         mandatoryFields: [{ name: "Product Name", type: "Text", required: true }],
         validationRules: ["Minimum 3 characters for product name"]
     });
-    const [windowWidth, setWindowWidth] = useState(1024);
-
-
-    useEffect(() => {
-        setWindowWidth(window.innerWidth);
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const isMobile = windowWidth < 768;
 
     const openAddModal = () => {
         setEditingCategory(null);
@@ -115,9 +104,7 @@ export default function CategoriesPage() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
                 <div>
-                    <h1 style={{ fontSize: isMobile ? "24px" : "28px", fontWeight: "bold", color: "white", marginBottom: "4px" }}>
-                        Category Management
-                    </h1>
+                    <h1 className="admin-title">Category Management</h1>
                     <p style={{ color: "#64748b", fontSize: "14px" }}>
                         Create and manage product categories
                     </p>
@@ -140,11 +127,7 @@ export default function CategoriesPage() {
             </div>
 
             {/* Category Grid */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-                gap: "16px"
-            }}>
+            <div className="admin-cards-grid">
                 {categories.map((category) => (
                     <div key={category.id} style={{
                         backgroundColor: "#1e293b",
@@ -338,7 +321,8 @@ export default function CategoriesPage() {
                                         alignItems: "center",
                                         backgroundColor: "#0f172a",
                                         padding: "10px",
-                                        borderRadius: "8px"
+                                        borderRadius: "8px",
+                                        flexWrap: "wrap"
                                     }}>
                                         <input
                                             type="text"
@@ -351,6 +335,7 @@ export default function CategoriesPage() {
                                             placeholder="Field name"
                                             style={{
                                                 flex: 1,
+                                                minWidth: "120px",
                                                 padding: "8px",
                                                 backgroundColor: "#1e293b",
                                                 border: "1px solid #334155",

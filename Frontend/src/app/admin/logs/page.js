@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 // Mock data
 const mockLogs = [
@@ -28,20 +28,9 @@ const logTypes = [
 ];
 
 export default function AuditLogsPage() {
-    const [logs, setLogs] = useState(mockLogs);
+    const [logs] = useState(mockLogs);
     const [filterType, setFilterType] = useState("all");
     const [searchTerm, setSearchTerm] = useState("");
-    const [windowWidth, setWindowWidth] = useState(1024);
-
-
-    useEffect(() => {
-        setWindowWidth(window.innerWidth);
-        const handleResize = () => setWindowWidth(window.innerWidth);
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    const isMobile = windowWidth < 768;
 
     const getFilteredLogs = () => {
         return logs.filter(log => {
@@ -87,9 +76,7 @@ export default function AuditLogsPage() {
             {/* Header */}
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "24px", flexWrap: "wrap", gap: "12px" }}>
                 <div>
-                    <h1 style={{ fontSize: isMobile ? "24px" : "28px", fontWeight: "bold", color: "white", marginBottom: "4px" }}>
-                        Audit Logs
-                    </h1>
+                    <h1 className="admin-title">Audit Logs</h1>
                     <p style={{ color: "#64748b", fontSize: "14px" }}>
                         Complete activity history of all admin actions
                     </p>
@@ -119,11 +106,7 @@ export default function AuditLogsPage() {
                 marginBottom: "24px",
                 border: "1px solid #334155"
             }}>
-                <div style={{
-                    display: "flex",
-                    gap: "12px",
-                    flexDirection: isMobile ? "column" : "row"
-                }}>
+                <div className="admin-filters">
                     {/* Search */}
                     <div style={{ flex: 1 }}>
                         <input
@@ -168,12 +151,7 @@ export default function AuditLogsPage() {
             </div>
 
             {/* Stats */}
-            <div style={{
-                display: "grid",
-                gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)",
-                gap: "12px",
-                marginBottom: "24px"
-            }}>
+            <div className="admin-stats-grid" style={{ marginBottom: "24px" }}>
                 {[
                     { label: "Total Logs", value: logs.length, color: "#3b82f6" },
                     { label: "Today", value: logs.filter(l => l.timestamp.includes("2024-01-13")).length, color: "#22c55e" },
@@ -211,15 +189,9 @@ export default function AuditLogsPage() {
                             borderRadius: "10px",
                             border: "1px solid #334155",
                             borderLeft: `4px solid ${getTypeColor(log.type)}`,
-                            padding: isMobile ? "14px" : "16px"
+                            padding: "14px"
                         }}>
-                            <div style={{
-                                display: "flex",
-                                justifyContent: "space-between",
-                                alignItems: isMobile ? "flex-start" : "center",
-                                flexDirection: isMobile ? "column" : "row",
-                                gap: "10px"
-                            }}>
+                            <div className="admin-row">
                                 <div style={{ display: "flex", alignItems: "flex-start", gap: "12px", flex: 1 }}>
                                     <span style={{
                                         width: "36px",
@@ -255,7 +227,7 @@ export default function AuditLogsPage() {
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ textAlign: isMobile ? "left" : "right", minWidth: isMobile ? "auto" : "120px" }}>
+                                <div style={{ minWidth: "120px" }}>
                                     <div style={{ color: "#64748b", fontSize: "12px" }}>{log.timestamp}</div>
                                     <div style={{ color: "#475569", fontSize: "11px" }}>by {log.user}</div>
                                 </div>

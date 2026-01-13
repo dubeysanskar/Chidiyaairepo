@@ -90,6 +90,78 @@ body {
   display: block;
 }
 
+/* ===== ADMIN PANEL RESPONSIVE STYLES ===== */
+
+/* Admin Sidebar - visible on desktop */
+.admin-sidebar {
+  display: flex !important;
+  flex-direction: column;
+  width: 260px;
+  background-color: #1e293b;
+  padding: 24px 16px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  z-index: 40;
+}
+
+/* Admin Mobile Header - hidden on desktop */
+.admin-mobile-header {
+  display: none !important;
+}
+
+/* Admin Main Content */
+.admin-main {
+  margin-left: 260px;
+  padding: 24px;
+  min-height: 100vh;
+  flex: 1;
+}
+
+/* Grid classes */
+.admin-grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+}
+
+.admin-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+}
+
+.admin-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 24px;
+}
+
+/* Flex row that becomes column on mobile */
+.admin-flex-row {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.admin-filter-row {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+}
+
+/* Page title */
+.admin-page-title {
+  font-size: 28px;
+  font-weight: bold;
+  color: white;
+  margin-bottom: 4px;
+}
+
+/* MOBILE BREAKPOINT */
 @media (max-width: 767px) {
   .hide-on-mobile {
     display: none !important;
@@ -130,5 +202,62 @@ body {
 
   .mobile-text-sm {
     font-size: 14px !important;
+  }
+
+  /* ===== ADMIN PANEL MOBILE OVERRIDES ===== */
+
+  /* Hide sidebar on mobile */
+  .admin-sidebar {
+    display: none !important;
+  }
+
+  /* Show mobile header on mobile */
+  .admin-mobile-header {
+    display: flex !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    background-color: #1e293b;
+    padding: 12px 16px;
+    z-index: 50;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  /* Adjust main content for mobile */
+  .admin-main {
+    margin-left: 0 !important;
+    padding: 72px 16px 16px !important;
+  }
+
+  /* Grids become 2 columns or 1 column on mobile */
+  .admin-grid-4 {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 12px !important;
+  }
+
+  .admin-grid-3 {
+    grid-template-columns: 1fr !important;
+  }
+
+  .admin-grid-2 {
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  /* Flex row becomes column on mobile */
+  .admin-flex-row {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+  }
+
+  .admin-filter-row {
+    flex-direction: column !important;
+  }
+
+  /* Smaller page title on mobile */
+  .admin-page-title {
+    font-size: 22px !important;
   }
 }
