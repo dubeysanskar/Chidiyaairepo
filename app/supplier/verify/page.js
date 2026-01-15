@@ -96,7 +96,7 @@ export default function SupplierKYC() {
                 setSubmitted(true);
                 // Redirect to pending page after short delay
                 setTimeout(() => {
-                    window.location.href = "/supplier/pending";
+                    window.location.href = "/checkout";
                 }, 2500);
             } else {
                 setError(data.error || "Failed to submit KYC");
@@ -132,13 +132,13 @@ export default function SupplierKYC() {
                         fontSize: "32px"
                     }}>✓</div>
                     <h1 style={{ fontSize: "24px", fontWeight: "bold", color: "#0f172a", marginBottom: "12px" }}>
-                        KYC Submitted Successfully
+                        Documents Submitted
                     </h1>
                     <p style={{ color: "#64748b", marginBottom: "24px" }}>
-                        Your verification documents have been submitted. Our team will review them within 24-48 hours.
+                        Your verification documents have been uploaded successfully.
                     </p>
                     <p style={{ color: "#94a3b8", fontSize: "14px" }}>
-                        Redirecting to dashboard...
+                        Redirecting to payment...
                     </p>
                 </div>
             </div>

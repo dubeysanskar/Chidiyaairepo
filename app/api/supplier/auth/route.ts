@@ -64,6 +64,7 @@ export async function POST(req: Request) {
                 supplierId: supplier.id,
             });
 
+            response.cookies.delete("auth_token"); // Clear buyer session
             response.cookies.set("supplier_token", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",
@@ -111,6 +112,7 @@ export async function POST(req: Request) {
             );
 
             const response = NextResponse.json({ success: true });
+            response.cookies.delete("auth_token"); // Clear buyer session
             response.cookies.set("supplier_token", token, {
                 httpOnly: true,
                 secure: process.env.NODE_ENV === "production",

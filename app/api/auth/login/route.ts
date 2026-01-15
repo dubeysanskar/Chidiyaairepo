@@ -56,6 +56,10 @@ export async function POST(request: NextRequest) {
 
         // Set cookie
         const cookieStore = await cookies()
+
+        // Clear any existing supplier session to avoid conflicts
+        cookieStore.delete("supplier_token")
+
         cookieStore.set("auth_token", token, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",

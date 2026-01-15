@@ -101,6 +101,11 @@ model Supplier {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  // Subscription
+  isSubscribed       Boolean   @default(false)
+  subscriptionExpiry DateTime?
+  razorpayOrderId    String?
+
   // Relations
   inquiries         Inquiry[]
   quotes            Quote[]

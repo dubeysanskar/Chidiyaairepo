@@ -2,8 +2,12 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 
 export default function SupplierLogin() {
+    const searchParams = useSearchParams();
+    const next = searchParams.get("next");
+
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
 
@@ -25,7 +29,13 @@ export default function SupplierLogin() {
             const data = await res.json();
 
             if (res.ok) {
-                window.location.href = "/supplier/dashboard";
+                if (next === "pricing") {
+                    window.location.href = "/#pricing";
+                } else if (next === "checkout") {
+                    window.location.href = "/checkout";
+                } else {
+                    window.location.href = "/supplier/dashboard";
+                }
             } else {
                 setError(data.error || "Login failed");
             }

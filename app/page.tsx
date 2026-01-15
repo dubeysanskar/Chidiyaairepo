@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { RollingTextList } from "@/app/components/ui/rolling-list";
 import { MagneticText } from "@/app/components/ui/morphing-cursor";
@@ -57,6 +58,125 @@ function AnimatedCounter({ end, duration = 2000, suffix = "" }: { end: number; d
 export default function Home() {
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
+  const router = useRouter();
+  const [user, setUser] = useState<{ email: string; role?: string } | null>(null);
+  const [isSubscribed, setIsSubscribed] = useState(false);
+  const [subLoading, setSubLoading] = useState(false);
+  const [showSubOptions, setShowSubOptions] = useState(false);
+
+  // ... (useEffect remains same)
+
+  const openSubOptions = () => {
+    setShowSubOptions(true);
+  };
+
+  const handleRenew = () => {
+    // Logic for "Renew / Existing"
+    if (user) {
+      // If logged in, go to checkout directly
+      router.push("/checkout");
+    } else {
+      // If not logged in, go to login then checkout
+      router.push("/supplier/login?next=checkout");
+    }
+  };
+
+  const handleNewApp = () => {
+    // Logic for "New Application"
+    router.push("/supplier/register");
+  };
+  useEffect(() => {
+    // Razorpay Script
+    const scriptUrl = "https://checkout.razorpay.com/v1/checkout.js";
+    if (!document.querySelector(`script[src="${scriptUrl}"]`)) {
+      const script = document.createElement("script");
+      script.src = scriptUrl;
+      script.async = true;
+      document.body.appendChild(script);
+    }
+
+    // Check Auth via Server Action
+    import("@/app/actions/auth").then(({ getUser }) => {
+      getUser().then((userData) => {
+        if (userData) {
+          setUser(userData);
+        }
+      });
+    });
+  }, []);
+
+  const handleSubscribe = async (plan: string) => {
+    if (!user) {
+      router.push("/supplier/login?next=pricing"); // Redirect to supplier login if not authenticated
+      return;
+    }
+
+    if (user.role && user.role !== "supplier") {
+      if (confirm("You are currently using a free Buyer account. To subscribe to the Pro plan, you need a Supplier account. Would you like to create one?")) {
+        router.push("/supplier/register?next=pricing");
+      }
+      return;
+    }
+
+    setSubLoading(true);
+    const amount = plan === "pro" ? 299900 : 299900; // ₹2,999 in paise
+
+    try {
+      const res = await fetch("/api/payment", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, email: user.email, plan }),
+      });
+
+      const order = await res.json();
+      if (!res.ok) throw new Error(order.error || "Payment initiation failed");
+      if (!order.id) throw new Error("Payment initiation failed! No Order ID returned.");
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount,
+        currency: "INR",
+        name: "ChidiyaAI",
+        description: "Pro Subscription",
+        order_id: order.id,
+        handler: async (response: any) => {
+          alert("Payment successful! Payment ID: " + response.razorpay_payment_id);
+
+          const expiryDate = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+
+          try {
+            const updateRes = await fetch("/api/users/updateSubscription", {
+              method: "PATCH",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: user.email,
+                subscribe: true,
+                subscriptionExpiry: expiryDate,
+                orderId: order.id,
+              }),
+            });
+
+            if (!updateRes.ok) throw new Error("Failed to update subscription");
+
+            alert("Subscription activated successfully!");
+            setIsSubscribed(true);
+          } catch (error) {
+            console.error("Subscription update failed:", error);
+            alert("Payment succeeded, but subscription update failed.");
+          }
+          setSubLoading(false);
+        },
+        prefill: { email: user.email },
+        theme: { color: "#3b82f6" },
+      };
+
+      const rzp1 = new (window as any).Razorpay(options);
+      rzp1.open();
+    } catch (error: any) {
+      alert(error.message);
+      setSubLoading(false);
+    }
+  };
 
   // Partner brands (placeholder names)
   const partners = ["TechCorp", "StyleHub", "GreenMart", "FastTrade", "PrimeBiz", "MaxSupply"];
@@ -153,7 +273,7 @@ export default function Home() {
                   backgroundColor: "transparent"
                 }}
               />
-              <Link href="/onboarding" style={{
+              <Link href="/account/register" style={{
                 backgroundColor: "#3b82f6",
                 color: "white",
                 padding: isMobile ? "16px" : "20px 32px",
@@ -171,7 +291,7 @@ export default function Home() {
             </div>
 
             <div style={{ display: "flex", flexDirection: isMobile ? "column" : "row", justifyContent: "center", gap: "16px", padding: isMobile ? "0 16px" : "0" }}>
-              <Link href="/onboarding" style={{
+              <Link href="/account/register" style={{
                 backgroundColor: "#0f172a",
                 color: "white",
                 padding: "14px 28px",
@@ -485,7 +605,7 @@ export default function Home() {
               <p style={{ fontSize: isMobile ? "16px" : "18px", color: "#64748b", marginBottom: "32px", lineHeight: "1.7" }}>
                 Stop wasting hours on IndiaMart. ChidiyaAI brings verified suppliers directly to you, with transparent pricing and instant communication.
               </p>
-              <Link href="/onboarding" style={{
+              <Link href="/account/register" style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
@@ -629,7 +749,19 @@ export default function Home() {
                 <li style={{ padding: "8px 0", fontSize: "14px", color: "#cbd5e1" }}>✓ Priority support</li>
                 <li style={{ padding: "8px 0", fontSize: "14px", color: "#cbd5e1" }}>✓ Supplier verification reports</li>
               </ul>
-              <Link href="/onboarding?plan=pro" style={{ display: "block", textAlign: "center", padding: "12px", backgroundColor: "white", borderRadius: "8px", color: "#0f172a", textDecoration: "none", fontWeight: "500" }}>Start Free Trial</Link>
+              {isSubscribed ? (
+                <button disabled className="block w-full text-center padding-3 bg-gray-500 rounded-lg text-white font-medium cursor-not-allowed opacity-70 p-3">
+                  Active Plan
+                </button>
+              ) : (
+                <button
+                  onClick={openSubOptions}
+                  disabled={subLoading}
+                  className="block w-full text-center p-3 bg-white rounded-lg text-[#0f172a] font-medium hover:bg-gray-100 transition-colors"
+                >
+                  {subLoading ? "Processing..." : "Start Free Trial"}
+                </button>
+              )}
             </div>
 
             {/* Enterprise */}
@@ -747,6 +879,83 @@ export default function Home() {
           </div>
         </div>
       </footer>
+      {/* Subscription Options Modal */}
+      {showSubOptions && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: "rgba(0,0,0,0.5)",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <div style={{
+            backgroundColor: "white",
+            padding: "32px",
+            borderRadius: "16px",
+            maxWidth: "400px",
+            width: "90%",
+            textAlign: "center"
+          }}>
+            <h3 style={{ fontSize: "20px", fontWeight: "bold", marginBottom: "24px", color: "#0f172a" }}>
+              Choose an Option
+            </h3>
+
+            <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+              <button
+                onClick={handleNewApp}
+                style={{
+                  padding: "16px",
+                  backgroundColor: "#3b82f6",
+                  color: "white",
+                  borderRadius: "12px",
+                  border: "none",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  fontSize: "16px"
+                }}
+              >
+                Create New Account
+              </button>
+
+              <button
+                onClick={handleRenew}
+                style={{
+                  padding: "16px",
+                  backgroundColor: "white",
+                  color: "#0f172a",
+                  borderRadius: "12px",
+                  border: "1px solid #e2e8f0",
+                  fontWeight: "600",
+                  cursor: "pointer",
+                  fontSize: "16px"
+                }}
+              >
+                Renew / Existing Account
+              </button>
+            </div>
+
+            <button
+              onClick={() => setShowSubOptions(false)}
+              style={{
+                marginTop: "24px",
+                color: "#64748b",
+                background: "none",
+                border: "none",
+                cursor: "pointer",
+                fontSize: "14px",
+                textDecoration: "underline"
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
