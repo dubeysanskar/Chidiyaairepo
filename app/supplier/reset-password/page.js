@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function ResetPassword() {
+function ResetPasswordContent() {
     const searchParams = useSearchParams();
     const token = searchParams.get("token");
 
@@ -276,5 +276,23 @@ export default function ResetPassword() {
                 </form>
             </div>
         </div>
+    );
+}
+
+export default function ResetPassword() {
+    return (
+        <Suspense fallback={
+            <div style={{
+                minHeight: "100vh",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                backgroundColor: "#f8fafc"
+            }}>
+                <div>Loading...</div>
+            </div>
+        }>
+            <ResetPasswordContent />
+        </Suspense>
     );
 }

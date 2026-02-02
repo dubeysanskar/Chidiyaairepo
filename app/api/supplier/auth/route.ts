@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { sendSupplierWelcomeEmail } from "../../../../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
 
@@ -52,6 +53,9 @@ export async function POST(req: Request) {
                     id: true,
                 },
             });
+
+            // Send welcome email (non-blocking)
+            sendSupplierWelcomeEmail(email, companyName).catch(console.error);
 
             const token = jwt.sign(
                 { id: supplier.id, type: "supplier" },

@@ -97,6 +97,13 @@ model Supplier {
   suspendedUntil    DateTime? // For time-based suspensions
   documents         SupplierDocument[]
   
+  // Email Verification
+  emailVerified     Boolean   @default(false)
+  verificationOTP   String?
+  otpExpiry         DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
+  
   // Timestamps
   lastLogin         DateTime?
   createdAt         DateTime @default(now())
@@ -174,6 +181,13 @@ model Buyer {
   flagged       Boolean  @default(false)
   flagReason    String?
   flagSeverity  String?  // low, medium, high
+  
+  // Email Verification
+  emailVerified     Boolean   @default(false)
+  verificationOTP   String?
+  otpExpiry         DateTime?
+  resetToken        String?
+  resetTokenExpiry  DateTime?
   
   // Stats
   inquiryCount  Int      @default(0)

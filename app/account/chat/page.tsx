@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -67,7 +67,7 @@ const allLocations = [
 const quantities = ["Less than 100 units", "100 - 500 units", "500 - 1000 units", "1000+ units", "Bulk Order"];
 const budgets = ["Under ₹50,000", "₹50,000 - ₹1 Lakh", "₹1 Lakh - ₹5 Lakh", "₹5 Lakh+", "Flexible"];
 
-export default function Chat() {
+function ChatContent() {
     const searchParams = useSearchParams();
     const sessionIdFromUrl = searchParams.get("session");
 
@@ -1068,3 +1068,14 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
     );
 }
 
+export default function Chat() {
+    return (
+        <Suspense fallback={
+            <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", backgroundColor: "#f0f5ff" }}>
+                <div>Loading chat...</div>
+            </div>
+        }>
+            <ChatContent />
+        </Suspense>
+    );
+}

@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function SupplierLogin() {
+function SupplierLoginContent() {
     const searchParams = useSearchParams();
     const next = searchParams.get("next");
 
@@ -187,5 +187,13 @@ export default function SupplierLogin() {
                 </Link>
             </div>
         </div>
+    );
+}
+
+export default function SupplierLogin() {
+    return (
+        <Suspense fallback={<div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>Loading...</div>}>
+            <SupplierLoginContent />
+        </Suspense>
     );
 }

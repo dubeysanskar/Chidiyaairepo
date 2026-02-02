@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
+import { sendAdminActionEmail } from "../../../../lib/email";
 
 export async function GET() {
     try {
@@ -24,11 +25,14 @@ export async function PUT(req: Request) {
         let updateData: any = {};
         let logMessage = "";
         let logAction = action;
+        let emailAction: 'approved' | 'suspended' | 'blocked' | 'unblocked' | 'badge_added' | 'badge_removed' | null = null;
+        let emailDetails: string | undefined;
 
         switch (action) {
             case "approve":
                 updateData = { status: "approved", suspendedUntil: null };
                 logMessage = "Approved supplier";
+                emailAction = 'approved';
                 break;
 
             case "reject":
@@ -49,21 +53,29 @@ export async function PUT(req: Request) {
                     suspendedUntil: suspendedUntil
                 };
                 logMessage = `Suspended supplier for ${days} days`;
+                emailAction = 'suspended';
+                emailDetails = `Your account has been suspended for ${days} days.`;
                 break;
 
             case "ban":
                 updateData = { status: "banned", suspendedUntil: null };
                 logMessage = "Permanently banned supplier";
+                emailAction = 'blocked';
                 break;
 
             case "restore":
                 updateData = { status: "approved", suspendedUntil: null };
                 logMessage = "Restored supplier";
+                emailAction = 'unblocked';
                 break;
 
             case "update_badges":
                 updateData = { badges: badges || [] };
                 logMessage = `Updated badges: ${(badges || []).join(", ") || "none"}`;
+                if (badges && badges.length > 0) {
+                    emailAction = 'badge_added';
+                    emailDetails = badges.join(", ");
+                }
                 break;
 
             default:
@@ -89,9 +101,21 @@ export async function PUT(req: Request) {
             }
         });
 
+        // Send email notification (non-blocking)
+        if (emailAction && supplier.email) {
+            sendAdminActionEmail(
+                supplier.email,
+                supplier.companyName,
+                emailAction,
+                'supplier',
+                emailDetails
+            ).catch(console.error);
+        }
+
         return NextResponse.json(supplier);
     } catch (error) {
         console.error("Supplier Update Error:", error);
         return NextResponse.json({ error: "Failed to update supplier" }, { status: 500 });
     }
 }
+

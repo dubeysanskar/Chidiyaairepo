@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "@/lib/prisma"
+import { sendBuyerWelcomeEmail } from "@/lib/email"
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key"
 
@@ -44,6 +45,9 @@ export async function POST(request: NextRequest) {
                 name,
             }
         })
+
+        // Send welcome email (non-blocking)
+        sendBuyerWelcomeEmail(buyer.email, buyer.name).catch(console.error)
 
         // Generate JWT token
         const token = jwt.sign(

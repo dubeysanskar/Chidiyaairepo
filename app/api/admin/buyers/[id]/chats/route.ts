@@ -3,10 +3,10 @@ import { prisma } from "../../../../../../lib/prisma";
 
 export async function GET(
     req: Request,
-    { params }: { params: { id: string } }
+    { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const buyerId = params.id;
+        const { id: buyerId } = await params;
 
         const chatSessions = await prisma.chatSession.findMany({
             where: { buyerId },
