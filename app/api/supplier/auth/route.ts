@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { sendSupplierWelcomeEmail } from "../../../../lib/email";
+import { sendSupplierWelcomeEmail, sendOTPEmail, generateOTP } from "../../../../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
 
@@ -37,6 +37,10 @@ export async function POST(req: Request) {
 
             const hashedPassword = await bcrypt.hash(password, 10);
 
+            // Generate OTP for email verification
+            const otp = generateOTP();
+            const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+
             const supplier = await prisma.supplier.create({
                 data: {
                     companyName,
@@ -48,11 +52,17 @@ export async function POST(req: Request) {
                     moq,
                     serviceLocations,
                     status: "pending",
+                    emailVerified: false,
+                    verificationOTP: otp,
+                    otpExpiry
                 },
                 select: {
                     id: true,
                 },
             });
+
+            // Send OTP email for verification
+            await sendOTPEmail(email, otp, companyName);
 
             // Send welcome email (non-blocking)
             sendSupplierWelcomeEmail(email, companyName).catch(console.error);

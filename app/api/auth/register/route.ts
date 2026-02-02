@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import bcrypt from "bcryptjs"
 import jwt from "jsonwebtoken"
 import { prisma } from "@/lib/prisma"
-import { sendBuyerWelcomeEmail } from "@/lib/email"
+import { sendBuyerWelcomeEmail, sendOTPEmail, generateOTP } from "@/lib/email"
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key"
 
@@ -37,14 +37,24 @@ export async function POST(request: NextRequest) {
         // Create full name
         const name = [first_name, last_name].filter(Boolean).join(" ") || email.split("@")[0]
 
-        // Create buyer
+        // Generate OTP for email verification
+        const otp = generateOTP()
+        const otpExpiry = new Date(Date.now() + 10 * 60 * 1000) // 10 minutes
+
+        // Create buyer with unverified email
         const buyer = await prisma.buyer.create({
             data: {
                 email,
                 password: hashedPassword,
                 name,
+                emailVerified: false,
+                verificationOTP: otp,
+                otpExpiry
             }
         })
+
+        // Send OTP email for verification
+        await sendOTPEmail(buyer.email, otp, buyer.name)
 
         // Send welcome email (non-blocking)
         sendBuyerWelcomeEmail(buyer.email, buyer.name).catch(console.error)
@@ -67,10 +77,13 @@ export async function POST(request: NextRequest) {
 
         return NextResponse.json({
             success: true,
+            requiresVerification: true,
+            message: "OTP sent to your email. Please verify to complete registration.",
             user: {
                 id: buyer.id,
                 email: buyer.email,
-                name: buyer.name
+                name: buyer.name,
+                emailVerified: false
             }
         })
 
@@ -82,3 +95,4 @@ export async function POST(request: NextRequest) {
         )
     }
 }
+
