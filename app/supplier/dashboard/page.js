@@ -108,7 +108,7 @@ export default function SupplierDashboard() {
     const [supplierCategories, setSupplierCategories] = useState([]);
     const [categoryTemplates, setCategoryTemplates] = useState([]);
     const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
-    const [categoryForm, setCategoryForm] = useState({ categoryId: "", description: "" });
+    const [categoryForm, setCategoryForm] = useState({ categoryId: "", description: "", customCategoryName: "" });
     const [categorySaving, setCategorySaving] = useState(false);
 
     // Add Product Form State (new enhanced version)
@@ -194,13 +194,18 @@ export default function SupplierDashboard() {
             showNotification("Please select a category", "error");
             return;
         }
+        if (categoryForm.categoryId === "other" && !categoryForm.customCategoryName.trim()) {
+            showNotification("Please enter a custom category name", "error");
+            return;
+        }
         setCategorySaving(true);
         try {
             const res = await fetch("/api/supplier/categories", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    categoryTemplateId: categoryForm.categoryId,
+                    categoryTemplateId: categoryForm.categoryId === "other" ? null : categoryForm.categoryId,
+                    customCategoryName: categoryForm.categoryId === "other" ? categoryForm.customCategoryName.trim() : null,
                     description: categoryForm.description
                 })
             });
@@ -208,7 +213,7 @@ export default function SupplierDashboard() {
             if (res.ok) {
                 showNotification("Category requested successfully!", "success");
                 setShowAddCategoryModal(false);
-                setCategoryForm({ categoryId: "", description: "" });
+                setCategoryForm({ categoryId: "", description: "", customCategoryName: "" });
                 fetchSupplierCategories();
             } else {
                 showNotification(data.error || "Failed to request category", "error");
@@ -557,7 +562,7 @@ export default function SupplierDashboard() {
                     <nav style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
                         {[
                             { id: "inquiries", label: "Inquiries", icon: "📥" },
-                            { id: "quotes", label: "My Quotes", icon: "📝" },
+                            { id: "dealsWon", label: "Deals Won", icon: "🤝" },
                             { id: "analytics", label: "Analytics", icon: "📊" },
                             { id: "profile", label: "Company Profile", icon: "🏢" },
                         ].map((item) => (
@@ -682,7 +687,7 @@ export default function SupplierDashboard() {
                     }}>
                         {[
                             { id: "inquiries", label: "Inquiries" },
-                            { id: "quotes", label: "Quotes" },
+                            { id: "dealsWon", label: "Deals Won" },
                             { id: "analytics", label: "Stats" },
                             { id: "profile", label: "Profile" },
                             { id: "productsCat", label: "Products" },
@@ -822,20 +827,91 @@ export default function SupplierDashboard() {
                     </div>
                 )}
 
-                {/* Quotes Tab (New) */}
-                {activeTab === "quotes" && (
+                {/* Deals Won Tab */}
+                {activeTab === "dealsWon" && (
                     <div style={{ backgroundColor: "white", borderRadius: "16px", border: "1px solid #e2e8f0" }}>
                         <div style={{ padding: "20px", borderBottom: "1px solid #e2e8f0" }}>
-                            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a" }}>My Quotes</h2>
+                            <h2 style={{ fontSize: "18px", fontWeight: "600", color: "#0f172a" }}>🤝 Deals Won</h2>
+                            <p style={{ fontSize: "13px", color: "#64748b", marginTop: "4px" }}>Buyers who contacted you via chat requesting your details</p>
                         </div>
                         <div>
-                            {quotes.length === 0 && (
-                                <div style={{ padding: "20px", textAlign: "center", color: "#64748b" }}>No quotes submitted yet.</div>
+                            {/* Filter inquiries where buyer contacted via chat for supplier details */}
+                            {inquiries.filter(inq => inq.status === "contacted" || inq.requiresContact).length === 0 && (
+                                <div style={{ padding: "40px 20px", textAlign: "center", color: "#64748b" }}>
+                                    <div style={{ fontSize: "48px", marginBottom: "12px" }}>🎯</div>
+                                    <div style={{ fontWeight: "500", marginBottom: "4px" }}>No deals won yet</div>
+                                    <div style={{ fontSize: "13px" }}>When buyers ask for your contact details in chat, they'll appear here</div>
+                                </div>
                             )}
-                            {quotes.map((quote) => (
-                                <div key={quote.id} style={{ padding: "20px", borderBottom: "1px solid #f1f5f9" }}>
-                                    <div style={{ fontWeight: "600", marginBottom: "4px" }}>Quote for Inquiry #{quote.inquiryId.substring(0, 8)}</div>
-                                    <div style={{ fontSize: "13px", color: "#64748b" }}>Price: {quote.price} | Status: {quote.status}</div>
+                            {inquiries.filter(inq => inq.status === "contacted" || inq.requiresContact).map((deal) => (
+                                <div key={deal.id} style={{
+                                    padding: "20px",
+                                    borderBottom: "1px solid #f1f5f9",
+                                    display: "flex",
+                                    justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    flexWrap: "wrap",
+                                    gap: "16px"
+                                }}>
+                                    <div style={{ flex: 1, minWidth: "200px" }}>
+                                        <div style={{ fontWeight: "600", fontSize: "15px", color: "#0f172a", marginBottom: "6px" }}>
+                                            {deal.buyerName || deal.buyer?.name || "Anonymous Buyer"}
+                                        </div>
+                                        <div style={{ fontSize: "13px", color: "#64748b", marginBottom: "4px" }}>
+                                            📧 {deal.buyerEmail || deal.buyer?.email || "No email provided"}
+                                        </div>
+                                        {deal.buyerPhone && (
+                                            <div style={{ fontSize: "13px", color: "#64748b", marginBottom: "4px" }}>
+                                                📱 {deal.buyerPhone}
+                                            </div>
+                                        )}
+                                        <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "8px" }}>
+                                            Product: {deal.productName || deal.category || "General Inquiry"}
+                                        </div>
+                                        <div style={{ fontSize: "12px", color: "#94a3b8" }}>
+                                            Qty: {deal.quantity} | Budget: {deal.budget}
+                                        </div>
+                                    </div>
+                                    <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                                        <a
+                                            href={`mailto:${deal.buyerEmail || deal.buyer?.email}?subject=Regarding your inquiry on ChidiyaAI&body=Hi ${deal.buyerName || "there"},\n\nThank you for your interest in our products. I'm reaching out regarding your inquiry.\n\nBest regards,\n${supplierProfile.companyName || "Supplier"}`}
+                                            style={{
+                                                padding: "8px 16px",
+                                                backgroundColor: "#3b82f6",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                fontSize: "13px",
+                                                textDecoration: "none",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "6px"
+                                            }}
+                                        >
+                                            ✉️ Send Email
+                                        </a>
+                                        <button
+                                            onClick={() => {
+                                                const poc = `POC Created:\nBuyer: ${deal.buyerName || 'N/A'}\nEmail: ${deal.buyerEmail || 'N/A'}\nPhone: ${deal.buyerPhone || 'N/A'}\nProduct: ${deal.productName || deal.category || 'N/A'}\nQuantity: ${deal.quantity}\nBudget: ${deal.budget}`;
+                                                navigator.clipboard.writeText(poc);
+                                                showNotification("POC copied to clipboard!", "success");
+                                            }}
+                                            style={{
+                                                padding: "8px 16px",
+                                                backgroundColor: "#22c55e",
+                                                color: "white",
+                                                border: "none",
+                                                borderRadius: "6px",
+                                                fontSize: "13px",
+                                                cursor: "pointer",
+                                                display: "inline-flex",
+                                                alignItems: "center",
+                                                gap: "6px"
+                                            }}
+                                        >
+                                            📋 Create POC
+                                        </button>
+                                    </div>
                                 </div>
                             ))}
                         </div>
@@ -1381,7 +1457,7 @@ export default function SupplierDashboard() {
                                                     Price Unit
                                                 </label>
                                                 <select
-                                                    value={addProductForm.priceUnit}
+                                                    value={addProductForm.priceUnit.startsWith("Other:") ? "Other" : addProductForm.priceUnit}
                                                     onChange={(e) => setAddProductForm({ ...addProductForm, priceUnit: e.target.value })}
                                                     style={{
                                                         width: "100%",
@@ -1398,7 +1474,28 @@ export default function SupplierDashboard() {
                                                     <option value="Kg">Per Kg</option>
                                                     <option value="Meter">Per Meter</option>
                                                     <option value="Pack">Per Pack</option>
+                                                    <option value="Dozen">Per Dozen</option>
+                                                    <option value="Liter">Per Liter</option>
+                                                    <option value="Other">Other (Specify)</option>
                                                 </select>
+                                                {(addProductForm.priceUnit === "Other" || addProductForm.priceUnit.startsWith("Other:")) && (
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Specify your price unit..."
+                                                        value={addProductForm.priceUnit.startsWith("Other:") ? addProductForm.priceUnit.replace("Other:", "") : ""}
+                                                        onChange={(e) => setAddProductForm({ ...addProductForm, priceUnit: `Other:${e.target.value}` })}
+                                                        style={{
+                                                            width: "100%",
+                                                            padding: "12px",
+                                                            border: "1px solid #e2e8f0",
+                                                            borderRadius: "8px",
+                                                            fontSize: "14px",
+                                                            color: "#0f172a",
+                                                            backgroundColor: "#ffffff",
+                                                            marginTop: "8px"
+                                                        }}
+                                                    />
+                                                )}
                                             </div>
                                         </div>
 
@@ -1849,7 +1946,7 @@ export default function SupplierDashboard() {
                                         </label>
                                         <select
                                             value={categoryForm.categoryId}
-                                            onChange={(e) => setCategoryForm({ ...categoryForm, categoryId: e.target.value })}
+                                            onChange={(e) => setCategoryForm({ ...categoryForm, categoryId: e.target.value, customCategoryName: e.target.value === "other" ? categoryForm.customCategoryName : "" })}
                                             style={{
                                                 width: "100%",
                                                 padding: "12px",
@@ -1866,7 +1963,26 @@ export default function SupplierDashboard() {
                                                     {cat.name}
                                                 </option>
                                             ))}
+                                            <option value="other">🆕 Other (Request New Category)</option>
                                         </select>
+                                        {categoryForm.categoryId === "other" && (
+                                            <input
+                                                type="text"
+                                                placeholder="Enter your category name (e.g., Plastic Containers, Jute Bags...)"
+                                                value={categoryForm.customCategoryName}
+                                                onChange={(e) => setCategoryForm({ ...categoryForm, customCategoryName: e.target.value })}
+                                                style={{
+                                                    width: "100%",
+                                                    padding: "12px",
+                                                    border: "1px solid #e2e8f0",
+                                                    borderRadius: "8px",
+                                                    fontSize: "14px",
+                                                    color: "#0f172a",
+                                                    backgroundColor: "#ffffff",
+                                                    marginTop: "8px"
+                                                }}
+                                            />
+                                        )}
                                     </div>
 
                                     <div>

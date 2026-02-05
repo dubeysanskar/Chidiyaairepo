@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
-        const { categoryTemplateId, customName, customDescription, customImage } = await request.json();
+        const { categoryTemplateId, customCategoryName, customName, customDescription, customImage, description } = await request.json();
 
         // Check if supplier already has this category
         if (categoryTemplateId) {
@@ -95,8 +95,8 @@ export async function POST(request: NextRequest) {
             data: {
                 supplierId,
                 categoryTemplateId: categoryTemplateId || null,
-                customName: customName || null,
-                customDescription: customDescription || null,
+                customName: customCategoryName || customName || null,
+                customDescription: description || customDescription || null,
                 customImage: customImage || null,
                 status: "pending", // Needs admin approval
                 isPrimary: false

@@ -144,7 +144,10 @@ export async function POST(request: NextRequest) {
             images = body.images || [];
 
             // New fields from JSON
-            price = body.price || null;
+            // Parse price - extract number from string (handles "₹25", "25-50", "Rs.100", etc.)
+            const priceStr = body.price?.toString() || "";
+            const priceMatch = priceStr.replace(/[₹Rs.,\s]/gi, "").match(/[\d.]+/);
+            price = priceMatch ? parseFloat(priceMatch[0]) : null;
             priceUnit = body.priceUnit || null;
             supplierCategoryId = body.supplierCategoryId || null;
             categoryTemplateId = body.categoryTemplateId || null;
@@ -212,10 +215,10 @@ export async function POST(request: NextRequest) {
             success: true,
             product
         });
-    } catch (error) {
+    } catch (error: any) {
         console.error("Failed to create product:", error);
         return NextResponse.json(
-            { error: "Failed to create product" },
+            { error: error?.message || "Failed to create product. Please check all required fields." },
             { status: 500 }
         );
     }
