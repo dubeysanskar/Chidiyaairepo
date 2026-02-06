@@ -30,7 +30,10 @@ export async function GET(req: Request) {
                 documents: true,
                 products: {
                     where: { isActive: true },
-                    orderBy: { createdAt: "desc" }
+                    orderBy: { createdAt: "desc" },
+                    include: {
+                        categoryTemplate: true
+                    }
                 },
             }
         });

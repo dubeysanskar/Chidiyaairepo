@@ -410,6 +410,9 @@ function AddProductContent() {
                                     {/* Images */}
                                     <div>
                                         <label style={labelStyle}>Product Images (Max 5)</label>
+                                        <p style={{ fontSize: "12px", color: "#64748b", marginBottom: "8px", marginTop: "-4px" }}>
+                                            💡 Recommended: <strong>1:1 aspect ratio</strong> (square), <strong>800×800px</strong> minimum. Max 2MB per image.
+                                        </p>
                                         <div style={{
                                             display: "flex",
                                             flexWrap: "wrap",

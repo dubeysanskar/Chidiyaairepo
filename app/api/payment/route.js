@@ -16,7 +16,7 @@ export async function POST(req) {
         headers: {
             "Content-Type": "application/json",
             Authorization: `Basic ${Buffer.from(
-                `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+                `${process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
             ).toString("base64")}`
         },
         body: JSON.stringify(orderData)

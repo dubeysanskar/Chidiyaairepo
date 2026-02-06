@@ -59,6 +59,29 @@ model AIAlert {
   @@map("ai_alerts")
 }
 
+model Notification {
+  id          String   @id @default(uuid())
+  userId      String   // Supplier or Buyer ID
+  title       String
+  message     String
+  type        String   @default("info") // info, success, warning, error
+  link        String?  // Optional link to related page
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  @@index([userId])
+  @@map("notifications")
+}
+
+model SystemSettings {
+  id        String   @id @default("default")
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("system_settings")
+}
+
 // ============================================
 // SUPPLIER MODELS
 // ============================================
@@ -109,19 +132,72 @@ model Supplier {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
-  // Subscription
-  isSubscribed       Boolean   @default(false)
+  // Trial Period & Subscription
+  trialStartDate     DateTime?  // When trial started (set on approval)
+  trialEndDate       DateTime?  // When trial ends (default: 6 months from start)
+  subscriptionStatus String     @default("trial") // trial, active, expired, cancelled
+  isSubscribed       Boolean    @default(false)
   subscriptionExpiry DateTime?
   razorpayOrderId    String?
-
+  razorpayCustomerId String?    // For auto-pay
+  autoPayEnabled     Boolean    @default(false)
+  lastPaymentDate    DateTime?
+  
   // Relations
-  inquiries         Inquiry[]
-  quotes            Quote[]
-  products          Product[]
-  ratings           SupplierRating[]
-  supplierCategories SupplierCategory[]
+  inquiries             Inquiry[]
+  quotes                Quote[]
+  products              Product[]
+  ratings               SupplierRating[]
+  supplierCategories    SupplierCategory[]
+  trialExtensionRequests TrialExtensionRequest[]
+  subscriptions         SubscriptionPayment[]
 
   @@map("suppliers")
+}
+
+// ============================================
+// TRIAL EXTENSION & SUBSCRIPTION
+// ============================================
+
+model TrialExtensionRequest {
+  id              String   @id @default(uuid())
+  supplierId      String
+  requestedMonths Int      // 1-6 months
+  reason          String?  // Why they need extension
+  status          String   @default("pending") // pending, approved, rejected
+  approvedMonths  Int?     // How many months admin approved
+  adminNote       String?  // Admin's response
+  approvedBy      String?  // Admin ID
+  createdAt       DateTime @default(now())
+  processedAt     DateTime?
+  
+  // Relations
+  supplier        Supplier @relation(fields: [supplierId], references: [id])
+  
+  @@index([supplierId])
+  @@map("trial_extension_requests")
+}
+
+model SubscriptionPayment {
+  id                String   @id @default(uuid())
+  supplierId        String
+  amount            Float
+  currency          String   @default("INR")
+  planType          String   // monthly, quarterly, yearly
+  razorpayPaymentId String?
+  razorpayOrderId   String?
+  razorpaySignature String?
+  status            String   @default("pending") // pending, success, failed
+  startDate         DateTime?
+  endDate           DateTime?
+  autoRenew         Boolean  @default(false)
+  createdAt         DateTime @default(now())
+  
+  // Relations
+  supplier          Supplier @relation(fields: [supplierId], references: [id])
+  
+  @@index([supplierId])
+  @@map("subscription_payments")
 }
 
 // ============================================
@@ -135,6 +211,7 @@ model CategoryTemplate {
   description     String?
   image           String?
   specifications  Json     // Array of spec definitions with options
+  commonNames     String[] // Common Indian names for chatbot matching
   isActive        Boolean  @default(true)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
