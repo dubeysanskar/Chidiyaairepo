@@ -47,6 +47,18 @@ export async function POST(request: NextRequest) {
             )
         }
 
+        // Check if email is verified
+        if (!buyer.emailVerified) {
+            return NextResponse.json(
+                {
+                    error: "Please verify your email first. Check your inbox for the OTP.",
+                    requiresVerification: true,
+                    email: buyer.email
+                },
+                { status: 403 }
+            )
+        }
+
         // Generate JWT token
         const token = jwt.sign(
             { id: buyer.id, email: buyer.email },

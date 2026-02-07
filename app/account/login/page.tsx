@@ -25,6 +25,11 @@ export default function LoginPage() {
       const data = await res.json()
 
       if (!res.ok) {
+        // If email not verified, redirect to verification page
+        if (data.requiresVerification && data.email) {
+          window.location.href = `/account/verify-email?email=${encodeURIComponent(data.email)}`
+          return
+        }
         setError(data.error || "Login failed")
         return
       }
@@ -180,6 +185,11 @@ export default function LoginPage() {
                 backgroundColor: "white"
               }}
             />
+            <div style={{ textAlign: "right", marginTop: "8px" }}>
+              <Link href="/account/forgot-password" style={{ fontSize: "13px", color: "#3b82f6", textDecoration: "none" }}>
+                Forgot password?
+              </Link>
+            </div>
           </div>
 
           <button

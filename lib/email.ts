@@ -113,7 +113,8 @@ export async function sendSupplierWelcomeEmail(email: string, companyName: strin
 // ============================================
 
 export async function sendPasswordResetEmail(email: string, resetToken: string, userType: 'buyer' | 'supplier' = 'buyer') {
-    const resetLink = `${BASE_URL}/${userType === 'supplier' ? 'supplier/' : ''}reset-password?token=${resetToken}`;
+    const resetPath = userType === 'supplier' ? 'supplier/reset-password' : 'account/reset-password';
+    const resetLink = `${BASE_URL}/${resetPath}?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     try {
         const client = getResend();

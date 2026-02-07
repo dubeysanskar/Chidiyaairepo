@@ -36,7 +36,7 @@ export default function RegisterPage() {
                 return
             }
 
-            window.location.href = "/account"
+            window.location.href = `/account/verify-email?email=${encodeURIComponent(email)}`
         } catch {
             setError("Something went wrong")
         } finally {

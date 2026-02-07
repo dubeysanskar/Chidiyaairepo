@@ -25,16 +25,21 @@ export default function UserAuthButton() {
 
     const handleLogout = async () => {
         try {
-            // Get CSRF token first
-            const csrfRes = await fetch("/api/auth/csrf");
-            const { csrfToken } = await csrfRes.json();
+            // 1. Clear custom JWT token first
+            await fetch("/api/auth/logout", { method: "POST" });
 
-            // Sign out with POST and CSRF token
-            await fetch("/api/auth/signout", {
-                method: "POST",
-                headers: { "Content-Type": "application/x-www-form-urlencoded" },
-                body: `csrfToken=${csrfToken}`,
-            });
+            // 2. Also try to sign out of NextAuth (for Google login)
+            try {
+                const csrfRes = await fetch("/api/auth/csrf");
+                const { csrfToken } = await csrfRes.json();
+                await fetch("/api/auth/signout", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+                    body: `csrfToken=${csrfToken}`,
+                });
+            } catch {
+                // NextAuth signout failed, but JWT is cleared
+            }
 
             // Clear user state and redirect to home
             setUser(null);
@@ -42,7 +47,7 @@ export default function UserAuthButton() {
             window.location.href = "/";
         } catch {
             // Fallback to redirect
-            window.location.href = "/api/auth/signout?callbackUrl=/";
+            window.location.href = "/";
         }
     };
 
