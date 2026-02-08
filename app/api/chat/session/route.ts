@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { cookies } from "next/headers";
-import jwt from "jsonwebtoken";
+import { getServerSession } from "next-auth";
+
+export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
     try {
@@ -13,24 +14,15 @@ export async function GET(request: NextRequest) {
             return NextResponse.json({ success: false, error: "Session ID required" }, { status: 400 });
         }
 
-        // Verify user is authenticated
-        const cookieStore = await cookies();
-        const token = cookieStore.get("token")?.value;
-
-        if (!token) {
+        // Use NextAuth session (same as other buyer APIs)
+        const session = await getServerSession();
+        if (!session?.user?.email) {
             return NextResponse.json({ success: false, error: "Unauthorized" }, { status: 401 });
-        }
-
-        let decoded;
-        try {
-            decoded = jwt.verify(token, process.env.JWT_SECRET || "fallback-secret") as { email: string; userType: string };
-        } catch {
-            return NextResponse.json({ success: false, error: "Invalid token" }, { status: 401 });
         }
 
         // Get buyer
         const buyer = await prisma.buyer.findUnique({
-            where: { email: decoded.email }
+            where: { email: session.user.email }
         });
 
         if (!buyer) {
@@ -38,7 +30,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Get chat session with messages
-        const session = await prisma.chatSession.findFirst({
+        const chatSession = await prisma.chatSession.findFirst({
             where: {
                 id: sessionId,
                 buyerId: buyer.id
@@ -50,20 +42,20 @@ export async function GET(request: NextRequest) {
             }
         });
 
-        if (!session) {
+        if (!chatSession) {
             return NextResponse.json({ success: false, error: "Session not found" }, { status: 404 });
         }
 
         return NextResponse.json({
             success: true,
             session: {
-                id: session.id,
-                location: session.location,
-                category: session.category,
-                quantity: session.quantity,
-                budget: session.budget,
-                status: session.status,
-                messages: session.messages.map(msg => ({
+                id: chatSession.id,
+                location: chatSession.location,
+                category: chatSession.category,
+                quantity: chatSession.quantity,
+                budget: chatSession.budget,
+                status: chatSession.status,
+                messages: chatSession.messages.map(msg => ({
                     role: msg.role,
                     content: msg.content,
                     createdAt: msg.createdAt.toISOString()

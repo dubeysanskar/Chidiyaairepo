@@ -292,15 +292,19 @@ function ChatContent() {
     };
 
     const startChat = async (reqs: UserRequirements) => {
-        // Save chat session to database
+        // Save chat session to database and capture sessionId
         try {
-            await fetch("/api/buyer/chat-session", {
+            const res = await fetch("/api/buyer/chat-session", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     location: reqs.location,
                 }),
             });
+            const data = await res.json();
+            if (data.sessionId) {
+                setCurrentSessionId(data.sessionId);
+            }
         } catch (err) {
             console.error("Failed to save chat session:", err);
         }
@@ -381,6 +385,7 @@ Just describe your requirements in a single message and I'll find the best match
                     conversationHistory,
                     userRequirements: requirements,
                     messageCount: messages.length + 1,
+                    sessionId: currentSessionId,  // Pass sessionId for message persistence
                 }),
             });
 

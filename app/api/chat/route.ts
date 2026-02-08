@@ -81,12 +81,14 @@ export async function POST(request: NextRequest) {
             message,
             conversationHistory = [],
             userRequirements,
-            messageCount = 0
+            messageCount = 0,
+            sessionId  // Accept sessionId from frontend
         }: {
             message: string;
             conversationHistory: ChatMessage[];
             userRequirements?: UserRequirements;
             messageCount?: number;
+            sessionId?: string;  // Optional session ID
         } = body;
 
         if (!message) {
@@ -130,6 +132,22 @@ export async function POST(request: NextRequest) {
                 });
             }
         }
+
+        // Save user message to database if sessionId is provided
+        if (sessionId && buyerId) {
+            try {
+                await prisma.chatMessage.create({
+                    data: {
+                        sessionId,
+                        role: "user",
+                        content: message,
+                    },
+                });
+            } catch (msgError) {
+                console.error("Failed to save user message:", msgError);
+            }
+        }
+
 
         // Fetch category templates from database for smart matching
         const categoryTemplates = await prisma.categoryTemplate.findMany({
@@ -324,6 +342,21 @@ export async function POST(request: NextRequest) {
                 missingSpecs,
             }
         );
+
+        // Save AI response to database if sessionId is provided
+        if (sessionId && buyerId) {
+            try {
+                await prisma.chatMessage.create({
+                    data: {
+                        sessionId,
+                        role: "assistant",
+                        content: aiResponse,
+                    },
+                });
+            } catch (msgError) {
+                console.error("Failed to save assistant message:", msgError);
+            }
+        }
 
         return NextResponse.json({
             success: true,
