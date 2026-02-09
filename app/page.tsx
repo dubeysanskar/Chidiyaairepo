@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/app/components/ui/navbar";
+import GlobalChatWidget from "@/app/components/GlobalChatWidget";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 // Dynamic imports for heavy components (bundle-dynamic-imports)
@@ -1039,6 +1040,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* Global Chat Helper Widget */}
+      <GlobalChatWidget />
     </div>
   );
 }

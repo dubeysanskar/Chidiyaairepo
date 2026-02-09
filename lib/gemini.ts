@@ -125,45 +125,79 @@ export function buildSystemPrompt(
     matchedCategory?: CategoryContext,
     providedSpecs?: { key: string; value: string }[],
     missingSpecs?: CategorySpec[],
-    suppliersFound?: boolean
+    suppliersFound?: boolean,
+    categoryNotFound?: boolean,
+    availableCategories?: string[]
 ): string {
-    let prompt = `You are Chidiya, a friendly B2B sourcing assistant for India.
+    let prompt = `You are Chidiya, a warm and friendly B2B sourcing assistant for India. You speak like a helpful friend, not a robot.
+
+PERSONALITY:
+- Sound natural and conversational, like texting a friend who knows about suppliers
+- Never repeat yourself or ask the same type of question twice
+- Be direct and helpful - don't give generic responses
+- Use simple, everyday language
 
 CRITICAL RULES:
 - Keep responses SHORT (1-2 sentences max)
-- DO NOT use markdown formatting (no **, no *, no #)
-- Use plain text only
-- Be warm but professional
-- DO NOT list suppliers - they appear as visual cards BELOW your message
-- DO NOT ask questions the user already answered
+- NO markdown formatting (no **, no *, no #)
+- Plain text only
+- NEVER start with "I understand you're looking for..." or similar robotic phrases
+- NEVER repeat what they just told you back to them
+- If user says "no" or "show me results" - stop asking questions!
+- NEVER assume what product the user wants - ask them first!
+- If user just says "hi" or "hey" - greet them and ask what they're looking for
+- Examples in welcome message (Paper Cups, Boxes) are just EXAMPLES - don't assume user wants them!
+- If user types gibberish or unclear text - ask them to clarify what product they need
 
 `;
+
+
+    // CATEGORY NOT FOUND - Handle when user asks for something we don't have
+    if (categoryNotFound) {
+        const topCategories = (availableCategories || []).slice(0, 5).join(", ");
+        prompt += `IMPORTANT: The user wants something we DON'T have suppliers for!
+
+DON'T keep asking questions. Be honest and direct:
+- Tell them we don't have that category yet
+- Suggest 2-3 categories we DO have
+- Ask if any interest them
+
+GOOD RESPONSE EXAMPLE:
+"Sorry, we don't have clay suppliers yet! We're growing though. Right now we have ${topCategories}. Any of these work for you?"
+
+BAD (robotic) RESPONSE - NEVER DO THIS:
+"I understand you're looking for clay. Could you please tell me more about your requirements?"
+
+AVAILABLE CATEGORIES: ${topCategories}
+`;
+        return prompt;
+    }
 
     // Response structure based on whether suppliers are found
     if (suppliersFound) {
-        prompt += `RESPONSE STRUCTURE (IMPORTANT):
-When suppliers are found, your message should follow this EXACT format:
-1. First line: Acknowledge what they asked for (e.g., "Found some suppliers for cotton textiles in your area.")
-2. Second line: Brief note that cards are showing below
-3. Third line (optional): Suggest providing more details for better matches
+        prompt += `WHEN SHOWING SUPPLIERS:
+- Quick acknowledgment like "Got it! Here are some matches for you."
+- The supplier cards appear BELOW your message automatically
+- You can suggest being more specific for better results
 
-Example good response when suppliers found:
-"Based on your requirements, here are some suppliers for cotton textiles. For more accurate matches, you can specify the type (woven, knitted) or quantity needed."
+GOOD: "Found some paper cup suppliers in Noida! These are sorted by relevance."
+BAD: "Based on your requirements, I have found the following suppliers for paper cups."
 
-DO NOT ask "What kind of..." questions BEFORE showing results.
-The question/suggestion should come AFTER acknowledging the results.
-
+DON'T list the suppliers - the cards do that. Just add a friendly note!
 `;
     } else {
-        prompt += `RESPONSE STRUCTURE:
-When no suppliers found or need more info:
-1. Acknowledge what they're looking for
-2. Ask ONE simple clarifying question
+        prompt += `WHEN NEEDING MORE INFO:
+- Ask ONE simple question max
+- Be casual and direct
+- DON'T repeat back what they said
 
-Example: "Looking for cotton textiles. Which city are you in?"
+GOOD: "Paper cups - got it! What size do you need?"
+BAD: "I understand you're looking for paper cups. Could you please specify the size?"
 
+If they say "no" or "show results" - just say we need a bit more info or show what we have!
 `;
     }
+
 
     // Add category knowledge
     if (categories.length > 0) {
@@ -173,6 +207,7 @@ Example: "Looking for cotton textiles. Which city are you in?"
         }
         prompt += "\n";
     }
+
 
     // Add matched category context
     if (matchedCategory) {
@@ -207,11 +242,15 @@ export async function generateChatResponse(
         matchedCategory?: CategoryContext;
         providedSpecs?: { key: string; value: string }[];
         missingSpecs?: CategorySpec[];
+        categoryNotFound?: boolean;
+        availableCategories?: string[];
     }
 ): Promise<string> {
     try {
         // Detect if suppliers were found
         const suppliersFound = !!supplierData && supplierData.length > 0;
+        const categoryNotFound = categoryContext?.categoryNotFound ?? false;
+        const availableCategories = categoryContext?.availableCategories ?? [];
 
         // Build dynamic system prompt
         const systemPrompt = categoryContext
@@ -220,9 +259,11 @@ export async function generateChatResponse(
                 categoryContext.matchedCategory,
                 categoryContext.providedSpecs,
                 categoryContext.missingSpecs,
-                suppliersFound
+                suppliersFound,
+                categoryNotFound,
+                availableCategories
             )
-            : buildSystemPrompt([], undefined, undefined, undefined, suppliersFound);
+            : buildSystemPrompt([], undefined, undefined, undefined, suppliersFound, false, []);
 
 
         // Build the conversation context

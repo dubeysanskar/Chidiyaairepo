@@ -5,6 +5,8 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import SupplierCard from "@/app/components/SupplierCard";
+import GSTCalculator, { GSTCalculatorButton } from "@/app/components/GSTCalculator";
+import GlobalChatWidget from "@/app/components/GlobalChatWidget";
 
 interface Supplier {
     id: string;
@@ -96,6 +98,7 @@ function ChatContent() {
     const [otherValue, setOtherValue] = useState("");
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredLocations, setFilteredLocations] = useState(allLocations.slice(0, 8));
+    const [showGSTCalculator, setShowGSTCalculator] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [subLoading, setSubLoading] = useState(false);
@@ -779,7 +782,8 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                         </Link>
                         <span style={{ width: "6px", height: "6px", backgroundColor: "#22c55e", borderRadius: "50%" }} />
                     </div>
-                    <div style={{ display: "flex", gap: "16px", fontSize: "14px" }}>
+                    <div style={{ display: "flex", gap: "12px", fontSize: "14px", alignItems: "center" }}>
+                        <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
                         <Link href="/account/dashboard" style={{ color: "#64748b", textDecoration: "none" }}>Dashboard</Link>
                         <button onClick={handleNewChat} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: "500" }}>
                             New Search
@@ -1059,6 +1063,12 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     </div>
                 </div>
             )}
+
+            {/* GST Calculator Modal */}
+            <GSTCalculator isOpen={showGSTCalculator} onClose={() => setShowGSTCalculator(false)} />
+
+            {/* Global Chat Helper Widget */}
+            <GlobalChatWidget />
 
             <style jsx global>{`
                 @keyframes bounce {
