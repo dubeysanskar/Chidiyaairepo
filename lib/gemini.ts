@@ -72,35 +72,53 @@ export function matchCategory(
     categories: CategoryContext[]
 ): CategoryContext | null {
     const lowerMessage = message.toLowerCase();
-    const stopWords = ['and', 'the', 'for', 'raw', 'fabric', 'fabrics', 'materials'];
+    // Generic words that are too ambiguous to match alone
+    const stopWords = ['and', 'the', 'for', 'raw', 'fabric', 'fabrics', 'materials',
+        'paper', 'plastic', 'tape', 'tapes', 'bag', 'bags', 'box', 'boxes',
+        'sheet', 'sheets', 'roll', 'rolls', 'wrap', 'wraps', 'cup', 'cups'];
 
+    // PASS 1: Exact full name match (highest priority)
     for (const category of categories) {
-        // Check if full category name is in message
         if (lowerMessage.includes(category.name.toLowerCase())) {
             return category;
         }
+    }
 
-        // Check common names
+    // PASS 2: Common names match
+    for (const category of categories) {
         for (const commonName of category.commonNames || []) {
             if (lowerMessage.includes(commonName.toLowerCase())) {
                 return category;
             }
         }
+    }
 
-        // Check slug
+    // PASS 3: Slug match
+    for (const category of categories) {
         if (lowerMessage.includes(category.slug.replace(/-/g, " "))) {
             return category;
         }
+    }
 
-        // NEW: Check if any significant keyword from category name appears in message
-        // This allows "polyester" to match "Polyester Fabric"
+    // PASS 4: Keyword matching - require specificity
+    // For multi-word categories, need at least 2 matching words
+    // For single unique keywords (like "corrugated", "thermocol"), 1 match is enough
+    for (const category of categories) {
         const categoryWords = category.name.toLowerCase().split(' ')
             .filter(word => word.length > 3 && !stopWords.includes(word));
 
-        for (const word of categoryWords) {
-            if (lowerMessage.includes(word)) {
-                return category;
-            }
+        if (categoryWords.length === 0) continue;
+
+        const matchingWords = categoryWords.filter(word => lowerMessage.includes(word));
+
+        // Single unique word (e.g., "corrugated", "polyester", "thermocol") - 1 match is enough
+        if (categoryWords.length === 1 && matchingWords.length === 1) {
+            return category;
+        }
+
+        // Multi-word category - need at least 2 matching unique words
+        if (categoryWords.length >= 2 && matchingWords.length >= 2) {
+            return category;
         }
     }
 

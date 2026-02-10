@@ -15,6 +15,7 @@ const RatingInteraction = dynamic(() => import("@/app/components/ui/emoji-rating
 
 // Menu items for navbar
 const navMenus = [
+  { id: 0, title: "Home", url: "/", dropdown: false },
   { id: 1, title: "Features", url: "#features", dropdown: false },
   { id: 2, title: "Pricing", url: "#pricing", dropdown: false },
   { id: 3, title: "Reviews", url: "#testimonials", dropdown: false },
@@ -940,7 +941,7 @@ export default function Home() {
           <div className="marquee-track">
             <div className="marquee-content">
               {[...Array(20)].map((_, i) => (
-                <span key={i} style={{ color: "white", fontWeight: "800", fontSize: isMobile ? "60px" : "100px", marginRight: "100px", textTransform: "uppercase", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
+                <span key={i} style={{ color: "white", fontWeight: "800", fontSize: isMobile ? "40px" : "70px", marginRight: "80px", textTransform: "uppercase", letterSpacing: "0.02em", whiteSpace: "nowrap" }}>
                   Chidiya AI
                 </span>
               ))}
@@ -954,7 +955,7 @@ export default function Home() {
           }
           .marquee-content {
             display: flex;
-            animation: marquee-scroll 16s linear infinite;
+            animation: marquee-scroll 30s linear infinite;
             will-change: transform;
           }
           @keyframes marquee-scroll {

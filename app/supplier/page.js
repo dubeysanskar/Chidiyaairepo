@@ -38,6 +38,9 @@ export default function SupplierLanding() {
                     {/* Desktop Nav */}
                     {!isMobile && (
                         <div style={{ display: "flex", gap: "16px", alignItems: "center" }}>
+                            <Link href="/" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>
+                                Home
+                            </Link>
                             <Link href="/supplier/login" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>
                                 Supplier Login
                             </Link>
@@ -68,6 +71,9 @@ export default function SupplierLanding() {
                 {/* Mobile Menu */}
                 {isMobile && menuOpen && (
                     <div style={{ paddingTop: "16px", display: "flex", flexDirection: "column", gap: "12px" }}>
+                        <Link href="/" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "12px", color: "#64748b", textDecoration: "none", textAlign: "center" }}>
+                            Home
+                        </Link>
                         <Link href="/supplier/login" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "12px", color: "#64748b", textDecoration: "none", textAlign: "center" }}>
                             Supplier Login
                         </Link>

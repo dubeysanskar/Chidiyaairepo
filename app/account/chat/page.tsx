@@ -69,6 +69,15 @@ const allLocations = [
 const quantities = ["Less than 100 units", "100 - 500 units", "500 - 1000 units", "1000+ units", "Bulk Order"];
 const budgets = ["Under ₹50,000", "₹50,000 - ₹1 Lakh", "₹1 Lakh - ₹5 Lakh", "₹5 Lakh+", "Flexible"];
 
+interface ChatHistoryItem {
+    id: string;
+    category: string;
+    location: string;
+    messages: Message[];
+    requirements: UserRequirements;
+    updatedAt: string;
+}
+
 function ChatContent() {
     const searchParams = useSearchParams();
     const sessionIdFromUrl = searchParams.get("session");
@@ -79,7 +88,7 @@ function ChatContent() {
     const [showQuestionnaire, setShowQuestionnaire] = useState(true);
     const [questionStep, setQuestionStep] = useState(0);
     const [chatComplete, setChatComplete] = useState(false);
-    const [contactsViewed, setContactsViewed] = useState(0); // Track contacts viewed per chat (limit: 3)
+    const [contactsViewed, setContactsViewed] = useState(0);
     const [showSubscriptionPrompt, setShowSubscriptionPrompt] = useState(false);
     const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionIdFromUrl);
     const [requirements, setRequirements] = useState<UserRequirements>({
@@ -100,8 +109,74 @@ function ChatContent() {
     const [filteredLocations, setFilteredLocations] = useState(allLocations.slice(0, 8));
     const [showGSTCalculator, setShowGSTCalculator] = useState(false);
 
+    // Chat history state
+    const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
+    const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [subLoading, setSubLoading] = useState(false);
+
+    // Load chat history from localStorage on mount
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("chidiyaai_chat_history");
+            if (saved) setChatHistory(JSON.parse(saved));
+        } catch { /* ignore */ }
+    }, []);
+
+    // Save current chat to history
+    const saveChatToHistory = (msgs: Message[], reqs: UserRequirements) => {
+        if (msgs.length < 2) return; // Don't save chats with less than 2 messages
+        try {
+            const saved = localStorage.getItem("chidiyaai_chat_history");
+            const history: ChatHistoryItem[] = saved ? JSON.parse(saved) : [];
+            const sessionId = currentSessionId || `chat_${Date.now()}`;
+
+            // Find first user message for label
+            const firstUserMsg = msgs.find(m => m.role === "user")?.content || "Chat";
+
+            const existing = history.findIndex(h => h.id === sessionId);
+            const item: ChatHistoryItem = {
+                id: sessionId,
+                category: reqs.category || firstUserMsg.slice(0, 40),
+                location: reqs.location || "",
+                messages: msgs.map(m => ({ ...m, suppliers: undefined })), // Strip suppliers to save space
+                requirements: reqs,
+                updatedAt: new Date().toISOString(),
+            };
+
+            if (existing >= 0) {
+                history[existing] = item;
+            } else {
+                history.unshift(item);
+            }
+
+            // Keep only last 20 chats
+            const trimmed = history.slice(0, 20);
+            localStorage.setItem("chidiyaai_chat_history", JSON.stringify(trimmed));
+            setChatHistory(trimmed);
+            if (!currentSessionId) setCurrentSessionId(sessionId);
+        } catch { /* ignore storage errors */ }
+    };
+
+    const loadChatFromHistory = (item: ChatHistoryItem) => {
+        setMessages(item.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
+        setRequirements(item.requirements);
+        setCurrentSessionId(item.id);
+        setShowQuestionnaire(false);
+        setChatComplete(false);
+        setShowHistoryDropdown(false);
+    };
+
+    const deleteChatFromHistory = (id: string) => {
+        try {
+            const saved = localStorage.getItem("chidiyaai_chat_history");
+            const history: ChatHistoryItem[] = saved ? JSON.parse(saved) : [];
+            const updated = history.filter(h => h.id !== id);
+            localStorage.setItem("chidiyaai_chat_history", JSON.stringify(updated));
+            setChatHistory(updated);
+        } catch { /* ignore */ }
+    };
 
     // Load existing session if sessionId is provided
     useEffect(() => {
@@ -414,26 +489,35 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     .replace(/\*/g, "")
                     .replace(/#{1,3}\s/g, "");
 
-                setMessages((prev) => [...prev, {
+                const aiMsg: Message = {
                     id: Date.now() + 1,
                     role: "assistant",
                     content: cleanResponse,
                     timestamp: new Date(),
                     suppliers: data.suppliers,
-                }]);
+                };
+                setMessages((prev) => {
+                    const updated = [...prev, aiMsg];
+                    saveChatToHistory(updated, requirements);
+                    return updated;
+                });
 
                 // Check if chat should complete (after showing suppliers)
                 if (data.hasSuppliers && messages.length >= 4) {
                     setTimeout(() => setChatComplete(true), 5000);
                 }
             } else {
-                // Handle error response
-                setMessages((prev) => [...prev, {
+                const errMsg: Message = {
                     id: Date.now() + 1,
                     role: "assistant",
                     content: data.response || "Sorry, I couldn't process your request. Please try again.",
                     timestamp: new Date(),
-                }]);
+                };
+                setMessages((prev) => {
+                    const updated = [...prev, errMsg];
+                    saveChatToHistory(updated, requirements);
+                    return updated;
+                });
             }
         } catch {
             setIsTyping(false);
@@ -492,10 +576,15 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
     };
 
     const handleNewChat = () => {
+        // Save current chat before clearing
+        if (messages.length >= 2) {
+            saveChatToHistory(messages, requirements);
+        }
         setMessages([]);
         setChatComplete(false);
         setShowQuestionnaire(true);
         setQuestionStep(0);
+        setCurrentSessionId(null);
         setRequirements({ location: "", category: "", quantity: "", budget: "" });
     };
 
@@ -784,6 +873,78 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     </div>
                     <div style={{ display: "flex", gap: "12px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
+                        <div style={{ position: "relative" }}>
+                            <button
+                                onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+                                style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", gap: "4px" }}
+                            >
+                                📋 History
+                                {chatHistory.length > 0 && (
+                                    <span style={{ backgroundColor: "#3b82f6", color: "white", borderRadius: "50%", width: "18px", height: "18px", fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                        {chatHistory.length}
+                                    </span>
+                                )}
+                            </button>
+                            {showHistoryDropdown && (
+                                <div style={{
+                                    position: "absolute",
+                                    top: "100%",
+                                    right: 0,
+                                    marginTop: "8px",
+                                    backgroundColor: "white",
+                                    borderRadius: "12px",
+                                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
+                                    border: "1px solid #e2e8f0",
+                                    width: "300px",
+                                    maxHeight: "400px",
+                                    overflowY: "auto",
+                                    zIndex: 100,
+                                }}>
+                                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", fontWeight: "600", fontSize: "14px", color: "#0f172a" }}>
+                                        Chat History
+                                    </div>
+                                    {chatHistory.length === 0 ? (
+                                        <div style={{ padding: "20px 16px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
+                                            No previous chats yet
+                                        </div>
+                                    ) : (
+                                        chatHistory.map((item) => (
+                                            <div
+                                                key={item.id}
+                                                style={{
+                                                    padding: "10px 16px",
+                                                    borderBottom: "1px solid #f1f5f9",
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center",
+                                                    cursor: "pointer",
+                                                }}
+                                                onClick={() => loadChatFromHistory(item)}
+                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
+                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
+                                            >
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontSize: "13px", fontWeight: "500", color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                        {item.category || "General Chat"}
+                                                    </div>
+                                                    <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
+                                                        {item.location && `📍 ${item.location} • `}
+                                                        {item.messages.length} msgs • {new Date(item.updatedAt).toLocaleDateString()}
+                                                    </div>
+                                                </div>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); deleteChatFromHistory(item.id); }}
+                                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "14px", padding: "4px", flexShrink: 0 }}
+                                                    title="Delete chat"
+                                                >
+                                                    ✕
+                                                </button>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
+                        </div>
                         <Link href="/account/dashboard" style={{ color: "#64748b", textDecoration: "none" }}>Dashboard</Link>
                         <button onClick={handleNewChat} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: "500" }}>
                             New Search
