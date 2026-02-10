@@ -331,23 +331,40 @@ export function shouldFetchSuppliers(
 ): boolean {
     const lowerMessage = lastMessage.toLowerCase();
 
+    // Greetings should never trigger supplier fetch
+    const greetings = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'thanks', 'thank you', 'bye'];
+    const isJustGreeting = greetings.some(g => lowerMessage.trim() === g || lowerMessage.trim() === g + '!');
+    if (isJustGreeting) return false;
+
     // Product keywords that indicate user wants to find suppliers
     const productKeywords = [
         "cup", "box", "tape", "bag", "wrap", "packaging", "poly", "corrugated", "bopp",
-        "need", "want", "looking", "find", "search", "get", "show", "require", "order"
+        "need", "want", "looking", "find", "search", "get", "show", "require", "order",
+        "supplier", "buy", "purchase", "bulk", "wholesale", "manufacturer", "vendor",
+        "textile", "fabric", "cotton", "paper", "plastic", "thermocol", "bubble",
+        "shipping", "carton", "pouch", "label", "sticker", "print"
     ];
 
     // Check if message contains product keywords
     const hasProductKeyword = productKeywords.some(keyword => lowerMessage.includes(keyword));
 
-    // Always fetch if user mentions a product or quantity
+    // User explicitly wants results
+    const wantsResults = /show\s+(me\s+)?results?/i.test(lowerMessage) ||
+        /show\s+(me\s+)?supplier/i.test(lowerMessage) ||
+        /yes/i.test(lowerMessage.trim()) ||
+        /no\s+preference/i.test(lowerMessage);
+
+    // Always fetch if user mentions a product or quantity  
     const hasQuantity = /\d+/.test(lastMessage);
 
-    // If we have provided specs and few/no missing important specs, fetch suppliers
-    const hasEnoughSpecs = providedSpecs && providedSpecs.length >= 1 &&
-        (!missingImportantSpecs || missingImportantSpecs.length <= 1);
+    // If we have provided specs, fetch suppliers
+    const hasSpecs = providedSpecs && providedSpecs.length >= 1;
 
-    // Fetch on first message if it contains product info with specs, OR after 2 messages
-    return (messageCount >= 1 && hasProductKeyword && (hasQuantity || hasEnoughSpecs)) ||
-        messageCount >= 3;
+    // FIXED: Much more permissive - the caller already checks for matchedCategory
+    // So if we get here, a category IS matched. Show suppliers in these cases:
+    // 1. User has product keyword (they're asking about a product)
+    // 2. User provided any specs or quantity
+    // 3. User explicitly wants results
+    // 4. After 2+ messages (they've been chatting, show something)
+    return hasProductKeyword || hasQuantity || hasSpecs || wantsResults || messageCount >= 2;
 }

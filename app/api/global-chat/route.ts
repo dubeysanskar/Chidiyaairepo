@@ -1,15 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 
 // Use separate API key for helper bot (future flexibility)
-const HELPER_API_KEY = process.env.GEMINI_HELPER_API_KEY || process.env.GEMINI_API_KEY;
-
-if (!HELPER_API_KEY) {
-    console.error("GEMINI_HELPER_API_KEY or GEMINI_API_KEY is not configured");
-}
-
-const genAI = HELPER_API_KEY ? new GoogleGenerativeAI(HELPER_API_KEY) : null;
+const HELPER_API_KEY = process.env.GEMINI_HELPER_API_KEY || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+const ai = new GoogleGenAI({ apiKey: HELPER_API_KEY });
 
 // Build system prompt for helper bot
 function buildHelperSystemPrompt(categories: Array<{ name: string; description?: string | null }>, products: string[]): string {
@@ -77,15 +72,8 @@ If user asks for contact info:
 
 export async function POST(request: NextRequest) {
     try {
-        if (!genAI) {
-            return NextResponse.json(
-                { error: "AI service not configured" },
-                { status: 500 }
-            );
-        }
-
         const body = await request.json();
-        const { message, conversationHistory = [] } = body;
+        const { message, conversationHistory = [], selectedCategory } = body;
 
         if (!message || typeof message !== "string") {
             return NextResponse.json(
@@ -114,29 +102,42 @@ export async function POST(request: NextRequest) {
         const allProducts = [...new Set(suppliers.flatMap(s => s.productCategories || []))];
 
         // Build system prompt
-        const systemPrompt = buildHelperSystemPrompt(categoryTemplates, allProducts);
+        let systemPrompt = buildHelperSystemPrompt(categoryTemplates, allProducts);
 
-        // Build conversation with history
-        const chatHistory = conversationHistory.map((msg: { role: string; content: string }) => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
-        }));
+        // Add selected category context if provided
+        if (selectedCategory) {
+            systemPrompt += `\n\nThe user has selected the category "${selectedCategory}". Focus your answers on this category. Explain what products fall under it, common specs, and terminology.`;
+        }
 
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        // Build conversation parts
+        const contents: Array<{ role: string; parts: Array<{ text: string }> }> = [
+            { role: 'user', parts: [{ text: systemPrompt }] },
+            { role: 'model', parts: [{ text: 'I understand. I am Chidiya, your product guide. I will help users understand our product categories and specifications while keeping contact information secure. How can I help you today?' }] },
+        ];
 
-        const chat = model.startChat({
-            history: [
-                { role: 'user', parts: [{ text: systemPrompt }] },
-                { role: 'model', parts: [{ text: 'I understand. I am Chidiya, your product guide. I will help users understand our product categories and specifications while keeping contact information secure. How can I help you today?' }] },
-                ...chatHistory,
-            ],
+        // Add conversation history
+        for (const msg of conversationHistory) {
+            contents.push({
+                role: msg.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: msg.content }],
+            });
+        }
+
+        // Add current message
+        contents.push({
+            role: 'user',
+            parts: [{ text: message }],
         });
 
-        const result = await chat.sendMessage(message);
-        const response = result.response.text();
+        const response = await ai.models.generateContent({
+            model: "gemini-2.0-flash",
+            contents,
+        });
+
+        const responseText = response.text || "";
 
         // Clean response of any markdown
-        const cleanResponse = response
+        const cleanResponse = responseText
             .replace(/\*\*/g, "")
             .replace(/\*/g, "")
             .replace(/#{1,3}\s/g, "");
@@ -156,7 +157,7 @@ export async function POST(request: NextRequest) {
     }
 }
 
-// GET endpoint to fetch categories (for category browser button)
+// GET endpoint to fetch categories (for category browser)
 export async function GET() {
     try {
         const categoryTemplates = await prisma.categoryTemplate.findMany({
