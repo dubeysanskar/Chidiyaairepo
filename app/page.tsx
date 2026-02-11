@@ -250,8 +250,17 @@ export default function Home() {
     }
   };
 
-  // Partner brands (placeholder names)
-  const partners = ["TechCorp", "StyleHub", "GreenMart", "FastTrade", "PrimeBiz", "MaxSupply"];
+  // Partner brands - realistic Indian wholesaler names (fictional)
+  const partners = [
+    { name: "Bharath Packwell", emoji: "📦" },
+    { name: "Hindpak Industries", emoji: "🏭" },
+    { name: "Vridhi Supplies", emoji: "🌿" },
+    { name: "Deshmart Trading", emoji: "🇮🇳" },
+    { name: "Nakshatra Packaging", emoji: "⭐" },
+    { name: "Suvarna Enterprises", emoji: "✨" },
+    { name: "Annapurna Wholesale", emoji: "🏪" },
+    { name: "Kalpvriksh Industries", emoji: "🌳" },
+  ];
 
   return (
     <div style={{ fontFamily: "'Inter', system-ui, sans-serif", color: "#0f172a" }}>
@@ -409,31 +418,61 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Partner Logos Section */}
-      <section style={{ padding: isMobile ? "40px 16px" : "60px 0", backgroundColor: "white", borderBottom: "1px solid #f1f5f9" }}>
-        <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "24px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>
+      {/* Partner Logos Section - Marquee Scroller */}
+      <section style={{ padding: isMobile ? "30px 0" : "50px 0", backgroundColor: "white", borderBottom: "1px solid #f1f5f9", overflow: "hidden" }}>
+        <p style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "20px", textTransform: "uppercase", letterSpacing: "1px", textAlign: "center" }}>
           Trusted by verified wholesaler partners
         </p>
-        <div style={{
-          display: "flex",
-          flexWrap: "wrap",
-          justifyContent: "center",
-          gap: isMobile ? "16px" : "32px",
-          padding: "0 16px"
-        }}>
-          {partners.map((partner, i) => (
-            <div
-              key={i}
-              style={{
-                fontSize: isMobile ? "16px" : "20px",
-                fontWeight: "bold",
-                color: "#cbd5e1"
-              }}
-            >
-              {partner}
-            </div>
-          ))}
+        <div className="partner-marquee-track">
+          <div className="partner-marquee-content">
+            {[...partners, ...partners, ...partners].map((partner, i) => (
+              <div
+                key={i}
+                className="partner-item"
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  padding: isMobile ? "8px 20px" : "12px 32px",
+                  marginRight: isMobile ? "16px" : "32px",
+                  fontSize: isMobile ? "15px" : "18px",
+                  fontWeight: "700",
+                  whiteSpace: "nowrap",
+                  filter: "grayscale(100%)",
+                  opacity: 0.5,
+                  transition: "all 0.3s ease",
+                  cursor: "default",
+                  borderRadius: "8px",
+                }}
+              >
+                <span style={{ fontSize: isMobile ? "20px" : "24px" }}>{partner.emoji}</span>
+                <span>{partner.name}</span>
+              </div>
+            ))}
+          </div>
         </div>
+        <style>{`
+          .partner-marquee-track {
+            display: flex;
+            width: 100%;
+            overflow: hidden;
+          }
+          .partner-marquee-content {
+            display: flex;
+            animation: partner-scroll 35s linear infinite;
+            will-change: transform;
+          }
+          .partner-item:hover {
+            filter: grayscale(0%) !important;
+            opacity: 1 !important;
+            color: #3b82f6 !important;
+            background: #eff6ff;
+          }
+          @keyframes partner-scroll {
+            from { transform: translateX(0); }
+            to { transform: translateX(-33.333%); }
+          }
+        `}</style>
       </section>
 
       {/* Meet Chidiya Section */}
@@ -567,7 +606,7 @@ export default function Home() {
               <p style={{ fontSize: "16px", color: "#64748b", marginBottom: "24px", lineHeight: "1.7" }}>
                 Chat with Chidiya 24/7 to find deals by category, ROI, budget, or volume — all from verified suppliers.
               </p>
-              <Link href="/auth/signin?redirect=onboarding" style={{
+              <Link href="/account/chat" style={{
                 display: "inline-flex",
                 alignItems: "center",
                 gap: "8px",
@@ -843,6 +882,31 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Contact Section */}
+      <section id="contact" style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "white" }}>
+        <div style={{ maxWidth: "700px", margin: "0 auto" }}>
+          <div style={{ textAlign: "center", marginBottom: "40px" }}>
+            <span style={{ display: "inline-block", padding: "6px 14px", backgroundColor: "#eff6ff", color: "#3b82f6", borderRadius: "20px", fontSize: "13px", fontWeight: "500", marginBottom: "12px" }}>
+              Get in Touch
+            </span>
+            <h2 style={{ fontSize: isMobile ? "28px" : "36px", fontWeight: "bold", color: "#0f172a", marginBottom: "12px" }}>
+              Have a Question?
+            </h2>
+            <p style={{ fontSize: "16px", color: "#64748b" }}>Drop us a message and we'll get back within 24 hours.</p>
+          </div>
+          <form onSubmit={(e) => { e.preventDefault(); alert('Thank you! We will get back to you shortly.'); (e.target as HTMLFormElement).reset(); }} style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "16px" }}>
+              <input type="text" required placeholder="Your Name" style={{ padding: "14px 18px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+              <input type="email" required placeholder="Email Address" style={{ padding: "14px 18px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", boxSizing: "border-box" }} />
+            </div>
+            <textarea required rows={4} placeholder="Your message..." style={{ padding: "14px 18px", borderRadius: "10px", border: "1px solid #e2e8f0", fontSize: "14px", outline: "none", resize: "vertical", boxSizing: "border-box" }} />
+            <button type="submit" style={{ padding: "14px", backgroundColor: "#3b82f6", color: "white", border: "none", borderRadius: "10px", fontSize: "15px", fontWeight: "600", cursor: "pointer" }}>
+              Send Message
+            </button>
+          </form>
+        </div>
+      </section>
+
       {/* Rating Section */}
       <section style={{ padding: "60px 24px", backgroundColor: "white", borderTop: "1px solid #e2e8f0" }}>
         <div style={{ maxWidth: "500px", margin: "0 auto", textAlign: "center" }}>
@@ -911,7 +975,7 @@ export default function Home() {
                 <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
                   <Link href="/about" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>About</Link>
                   <Link href="/supplier" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>For Suppliers</Link>
-                  <Link href="/contact" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>Contact</Link>
+                  <Link href="#contact" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>Contact</Link>
                 </div>
               </div>
               <div>

@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { GoogleGenAI } from "@google/genai";
 import { prisma } from "@/lib/prisma";
 
-// Use separate API key for helper bot (future flexibility)
-const HELPER_API_KEY = process.env.GEMINI_HELPER_API_KEY || process.env.GEMINI_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
+// Use main API key first, fall back to helper key
+const HELPER_API_KEY = process.env.GEMINI_API_KEY || process.env.GEMINI_HELPER_API_KEY || process.env.NEXT_PUBLIC_GEMINI_API_KEY || "";
 const ai = new GoogleGenAI({ apiKey: HELPER_API_KEY });
 
 // Build system prompt for helper bot
@@ -136,6 +136,15 @@ export async function POST(request: NextRequest) {
 
         const responseText = response.text || "";
 
+        if (!responseText) {
+            console.warn("Global Chat: Empty response from Gemini API");
+            return NextResponse.json({
+                success: true,
+                response: "I'm having a moment! Could you try asking again?",
+                categories: categoryTemplates.map(c => c.name),
+            });
+        }
+
         // Clean response of any markdown
         const cleanResponse = responseText
             .replace(/\*\*/g, "")
@@ -148,10 +157,10 @@ export async function POST(request: NextRequest) {
             categories: categoryTemplates.map(c => c.name),
         });
 
-    } catch (error) {
-        console.error("Global Chat API Error:", error);
+    } catch (error: any) {
+        console.error("Global Chat API Error:", error?.message || error);
         return NextResponse.json(
-            { error: "Failed to process message" },
+            { error: "Failed to process message", details: error?.message || "Unknown error" },
             { status: 500 }
         );
     }

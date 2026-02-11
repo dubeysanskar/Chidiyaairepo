@@ -1,7 +1,6 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import Image from "next/image";
 
 const colorClassMap = {
     blue: "text-blue-500",
@@ -44,7 +43,7 @@ function RollingTextItem({ item }) {
                 {item.description}
             </p>
 
-            {/* Image Reveal Effect - Desktop only */}
+            {/* Icon Reveal Effect - Desktop only */}
             <div
                 className={cn(
                     "pointer-events-none absolute right-0 top-1/2 z-20 h-32 w-48 -translate-y-1/2 overflow-hidden rounded-lg shadow-2xl",
@@ -54,14 +53,8 @@ function RollingTextItem({ item }) {
                     "hidden md:block"
                 )}
             >
-                <div className="relative h-full w-full">
-                    <Image
-                        src={item.src}
-                        alt={item.alt}
-                        fill
-                        className="object-cover grayscale transition-all duration-500 ease-out group-hover:grayscale-0"
-                    />
-                    <div className="absolute inset-0 bg-blue-600/15 mix-blend-overlay" />
+                <div className="relative h-full w-full bg-gradient-to-br from-blue-50 to-blue-100 flex items-center justify-center">
+                    <span className="text-6xl">{item.icon}</span>
                 </div>
             </div>
         </div>
@@ -75,8 +68,7 @@ function RollingTextList() {
             title: "Verified",
             category: "Trust",
             description: "Verified supplier and rigorously reviewed for quality, credibility, and reliability.",
-            src: "https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&auto=format&fit=crop&q=60",
-            alt: "GST Verified Suppliers",
+            icon: "✅",
             color: "blue",
         },
         {
@@ -84,8 +76,7 @@ function RollingTextList() {
             title: "Savings",
             category: "ROI",
             description: "Discover better prices and reduce sourcing costs automatically.",
-            src: "https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400&auto=format&fit=crop&q=60",
-            alt: "Save money on sourcing",
+            icon: "💰",
             color: "blue",
         },
         {
@@ -93,8 +84,7 @@ function RollingTextList() {
             title: "Fast",
             category: "Speed",
             description: "Get matched in minute, AI handles the heavy lifting so you move faster.",
-            src: "https://images.unsplash.com/photo-1518770660439-4636190af475?w=400&auto=format&fit=crop&q=60",
-            alt: "10x faster matching",
+            icon: "⚡",
             color: "blue",
         },
         {
@@ -102,8 +92,7 @@ function RollingTextList() {
             title: "Alerts",
             category: "Updates",
             description: "Never miss a deal. Get notified automatically when prices drop.",
-            src: "https://images.unsplash.com/photo-1520607162513-77705c0f0d4a?w=400&auto=format&fit=crop&q=60",
-            alt: "Price drop alerts",
+            icon: "🔔",
             color: "blue",
         },
         {
@@ -111,8 +100,7 @@ function RollingTextList() {
             title: "Compare",
             category: "Analysis",
             description: "Compare prices. Pick better.",
-            src: "https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400&auto=format&fit=crop&q=60",
-            alt: "Compare suppliers",
+            icon: "📊",
             color: "blue",
         },
         {
@@ -120,8 +108,7 @@ function RollingTextList() {
             title: "Private",
             category: "Security",
             description: "We never share your phone number with any suppliers.",
-            src: "https://images.unsplash.com/photo-1563986768609-322da13575f3?w=400&auto=format&fit=crop&q=60",
-            alt: "Privacy first platform",
+            icon: "🔒",
             color: "blue",
         },
     ];

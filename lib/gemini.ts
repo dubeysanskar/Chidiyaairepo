@@ -75,7 +75,10 @@ export function matchCategory(
     // Generic words that are too ambiguous to match alone
     const stopWords = ['and', 'the', 'for', 'raw', 'fabric', 'fabrics', 'materials',
         'paper', 'plastic', 'tape', 'tapes', 'bag', 'bags', 'box', 'boxes',
-        'sheet', 'sheets', 'roll', 'rolls', 'wrap', 'wraps', 'cup', 'cups'];
+        'sheet', 'sheets', 'roll', 'rolls', 'wrap', 'wraps', 'cup', 'cups',
+        'poly', 'polythene', 'polyethene', 'packing', 'pack', 'packaging',
+        'cover', 'covers', 'film', 'films', 'label', 'labels', 'print',
+        'pouch', 'pouches', 'bottle', 'bottles', 'container', 'containers'];
 
     // PASS 1: Exact full name match (highest priority)
     for (const category of categories) {
@@ -378,11 +381,12 @@ export function shouldFetchSuppliers(
     // If we have provided specs, fetch suppliers
     const hasSpecs = providedSpecs && providedSpecs.length >= 1;
 
-    // FIXED: Much more permissive - the caller already checks for matchedCategory
-    // So if we get here, a category IS matched. Show suppliers in these cases:
-    // 1. User has product keyword (they're asking about a product)
-    // 2. User provided any specs or quantity
-    // 3. User explicitly wants results
-    // 4. After 2+ messages (they've been chatting, show something)
-    return hasProductKeyword || hasQuantity || hasSpecs || wantsResults || messageCount >= 2;
+    // Show suppliers only after enough conversation (at least 2 full exchanges = 4 messages)
+    // 1. User explicitly wants results → show immediately
+    // 2. User has product keyword AND specs/quantity → show after 3+ messages
+    // 3. After 4+ messages (they've been chatting enough, show something)
+    if (wantsResults) return true;
+    if (hasProductKeyword && (hasSpecs || hasQuantity) && messageCount >= 3) return true;
+    if (messageCount >= 4) return true;
+    return false;
 }
