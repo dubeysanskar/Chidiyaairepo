@@ -111,7 +111,7 @@ function ChatContent() {
 
     // Chat history state
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
-    const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+    const [showHistoryDropdown, setShowHistoryDropdown] = useState(true);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [subLoading, setSubLoading] = useState(false);
@@ -140,7 +140,7 @@ function ChatContent() {
                 id: sessionId,
                 category: reqs.category || firstUserMsg.slice(0, 40),
                 location: reqs.location || "",
-                messages: msgs.map(m => ({ ...m, suppliers: undefined })), // Strip suppliers to save space
+                messages: msgs.map(m => ({ ...m })), // Keep suppliers for history
                 requirements: reqs,
                 updatedAt: new Date().toISOString(),
             };
@@ -837,26 +837,209 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
         );
     }
 
-    // Main chat interface
+    // Group chat history by date
+    const groupHistoryByDate = () => {
+        const groups: Record<string, ChatHistoryItem[]> = {};
+        const now = new Date();
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const yesterday = new Date(today.getTime() - 86400000);
+        const lastWeek = new Date(today.getTime() - 7 * 86400000);
+
+        chatHistory.forEach(item => {
+            const d = new Date(item.updatedAt);
+            let key: string;
+            if (d >= today) key = "Today";
+            else if (d >= yesterday) key = "Yesterday";
+            else if (d >= lastWeek) key = "Last 7 Days";
+            else key = "Older";
+
+            if (!groups[key]) groups[key] = [];
+            groups[key].push(item);
+        });
+
+        return groups;
+    };
+
+    const groupedHistory = groupHistoryByDate();
+    const groupOrder = ["Today", "Yesterday", "Last 7 Days", "Older"];
+
+    // Main chat interface with sidebar
     return (
         <div style={{
-            minHeight: "100vh",
+            height: "100vh",
             display: "flex",
-            flexDirection: "column",
             fontFamily: "'Inter', system-ui, sans-serif",
-            backgroundColor: "#f8fafc"
+            backgroundColor: "#0f172a",
+            overflow: "hidden"
         }}>
-            {/* Header */}
-            <header style={{
-                position: "sticky",
-                top: 0,
-                zIndex: 50,
-                backgroundColor: "white",
-                borderBottom: "1px solid #e2e8f0",
-                padding: "14px 24px"
+            {/* ============ SIDEBAR ============ */}
+            <div style={{
+                width: showHistoryDropdown ? "280px" : "0px",
+                minWidth: showHistoryDropdown ? "280px" : "0px",
+                transition: "all 0.3s ease",
+                backgroundColor: "#1e293b",
+                borderRight: showHistoryDropdown ? "1px solid #334155" : "none",
+                display: "flex",
+                flexDirection: "column",
+                overflow: "hidden",
+                flexShrink: 0
             }}>
-                <div style={{ maxWidth: "900px", margin: "0 auto", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                {/* Sidebar Header */}
+                <div style={{ padding: "16px", borderBottom: "1px solid #334155" }}>
+                    <button
+                        onClick={handleNewChat}
+                        style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "10px",
+                            padding: "12px 16px",
+                            backgroundColor: "#334155",
+                            border: "1px solid #475569",
+                            borderRadius: "12px",
+                            color: "white",
+                            fontSize: "14px",
+                            fontWeight: "500",
+                            cursor: "pointer"
+                        }}
+                    >
+                        <span style={{ fontSize: "16px" }}>+</span>
+                        New Search
+                    </button>
+                </div>
+
+                {/* Session List */}
+                <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                    {chatHistory.length === 0 ? (
+                        <div style={{ padding: "16px", textAlign: "center" }}>
+                            <p style={{ color: "#64748b", fontSize: "12px" }}>No chat history yet</p>
+                        </div>
+                    ) : (
+                        groupOrder.map(group =>
+                            groupedHistory[group] && groupedHistory[group].length > 0 && (
+                                <div key={group} style={{ marginBottom: "16px" }}>
+                                    <p style={{
+                                        padding: "8px 12px",
+                                        fontSize: "10px",
+                                        fontWeight: "600",
+                                        color: "#64748b",
+                                        textTransform: "uppercase",
+                                        letterSpacing: "0.05em",
+                                        margin: 0
+                                    }}>
+                                        {group}
+                                    </p>
+                                    {groupedHistory[group].map(item => (
+                                        <div
+                                            key={item.id}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "space-between",
+                                                padding: "8px 12px",
+                                                borderRadius: "8px",
+                                                cursor: "pointer",
+                                                marginBottom: "2px",
+                                                backgroundColor: currentSessionId === item.id ? "#334155" : "transparent",
+                                                color: currentSessionId === item.id ? "white" : "#94a3b8"
+                                            }}
+                                            onClick={() => loadChatFromHistory(item)}
+                                            onMouseEnter={(e) => {
+                                                if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = "#1e293b80";
+                                            }}
+                                            onMouseLeave={(e) => {
+                                                if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = "transparent";
+                                            }}
+                                        >
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{
+                                                    margin: 0,
+                                                    fontSize: "13px",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                    lineHeight: "1.4"
+                                                }}>
+                                                    {item.category || "General Chat"}
+                                                </p>
+                                                {item.location && (
+                                                    <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#64748b" }}>
+                                                        📍 {item.location}
+                                                    </p>
+                                                )}
+                                            </div>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); deleteChatFromHistory(item.id); }}
+                                                style={{
+                                                    background: "none",
+                                                    border: "none",
+                                                    cursor: "pointer",
+                                                    color: "#64748b",
+                                                    fontSize: "12px",
+                                                    padding: "4px",
+                                                    flexShrink: 0,
+                                                    opacity: 0.5
+                                                }}
+                                                title="Delete chat"
+                                            >
+                                                ✕
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )
+                        )
+                    )}
+                </div>
+
+                {/* Sidebar Footer */}
+                <div style={{ padding: "12px", borderTop: "1px solid #334155" }}>
+                    <Link href="/" style={{
+                        display: "flex", alignItems: "center", gap: "8px",
+                        padding: "8px 12px", color: "#94a3b8", textDecoration: "none",
+                        fontSize: "13px", borderRadius: "8px"
+                    }}>
+                        🏠 Home
+                    </Link>
+                    <Link href="/account/dashboard" style={{
+                        display: "flex", alignItems: "center", gap: "8px",
+                        padding: "8px 12px", color: "#94a3b8", textDecoration: "none",
+                        fontSize: "13px", borderRadius: "8px"
+                    }}>
+                        📊 Dashboard
+                    </Link>
+                </div>
+            </div>
+
+            {/* ============ MAIN CONTENT ============ */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0 }}>
+                {/* Top Nav */}
+                <header style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "12px 20px",
+                    borderBottom: "1px solid #1e293b",
+                    backgroundColor: "#0f172a"
+                }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        {/* Sidebar toggle */}
+                        <button
+                            onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
+                            style={{
+                                padding: "8px",
+                                background: "none",
+                                border: "none",
+                                cursor: "pointer",
+                                color: "#94a3b8",
+                                fontSize: "18px",
+                                borderRadius: "8px",
+                                display: "flex",
+                                alignItems: "center"
+                            }}
+                        >
+                            {showHistoryDropdown ? "◀" : "☰"}
+                        </button>
                         <Link href="/" style={{ textDecoration: "none", display: "flex", alignItems: "center", gap: "8px" }}>
                             <Image
                                 src="/assests/chidiyaaiicon.png"
@@ -865,236 +1048,167 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 height={32}
                                 style={{ width: "32px", height: "32px" }}
                             />
-                            <span style={{ fontSize: "17px", fontWeight: "bold", color: "#0f172a" }}>
+                            <span style={{ fontSize: "17px", fontWeight: "bold", color: "white" }}>
                                 Chidiya<span style={{ color: "#3b82f6" }}>AI</span>
                             </span>
                         </Link>
                         <span style={{ width: "6px", height: "6px", backgroundColor: "#22c55e", borderRadius: "50%" }} />
                     </div>
-                    <div style={{ display: "flex", gap: "12px", fontSize: "14px", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: "16px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
-                        <div style={{ position: "relative" }}>
-                            <button
-                                onClick={() => setShowHistoryDropdown(!showHistoryDropdown)}
-                                style={{ color: "#64748b", background: "none", border: "none", cursor: "pointer", fontSize: "14px", display: "flex", alignItems: "center", gap: "4px" }}
-                            >
-                                📋 History
-                                {chatHistory.length > 0 && (
-                                    <span style={{ backgroundColor: "#3b82f6", color: "white", borderRadius: "50%", width: "18px", height: "18px", fontSize: "11px", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                        {chatHistory.length}
-                                    </span>
-                                )}
-                            </button>
-                            {showHistoryDropdown && (
-                                <div style={{
-                                    position: "absolute",
-                                    top: "100%",
-                                    right: 0,
-                                    marginTop: "8px",
-                                    backgroundColor: "white",
-                                    borderRadius: "12px",
-                                    boxShadow: "0 4px 20px rgba(0,0,0,0.15)",
-                                    border: "1px solid #e2e8f0",
-                                    width: "300px",
-                                    maxHeight: "400px",
-                                    overflowY: "auto",
-                                    zIndex: 100,
-                                }}>
-                                    <div style={{ padding: "12px 16px", borderBottom: "1px solid #e2e8f0", fontWeight: "600", fontSize: "14px", color: "#0f172a" }}>
-                                        Chat History
-                                    </div>
-                                    {chatHistory.length === 0 ? (
-                                        <div style={{ padding: "20px 16px", textAlign: "center", color: "#94a3b8", fontSize: "13px" }}>
-                                            No previous chats yet
-                                        </div>
-                                    ) : (
-                                        chatHistory.map((item) => (
-                                            <div
-                                                key={item.id}
-                                                style={{
-                                                    padding: "10px 16px",
-                                                    borderBottom: "1px solid #f1f5f9",
-                                                    display: "flex",
-                                                    justifyContent: "space-between",
-                                                    alignItems: "center",
-                                                    cursor: "pointer",
-                                                }}
-                                                onClick={() => loadChatFromHistory(item)}
-                                                onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = "#f8fafc")}
-                                                onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "transparent")}
-                                            >
-                                                <div style={{ flex: 1, minWidth: 0 }}>
-                                                    <div style={{ fontSize: "13px", fontWeight: "500", color: "#0f172a", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                        {item.category || "General Chat"}
-                                                    </div>
-                                                    <div style={{ fontSize: "11px", color: "#94a3b8", marginTop: "2px" }}>
-                                                        {item.location && `📍 ${item.location} • `}
-                                                        {item.messages.length} msgs • {new Date(item.updatedAt).toLocaleDateString()}
-                                                    </div>
-                                                </div>
-                                                <button
-                                                    onClick={(e) => { e.stopPropagation(); deleteChatFromHistory(item.id); }}
-                                                    style={{ background: "none", border: "none", cursor: "pointer", color: "#94a3b8", fontSize: "14px", padding: "4px", flexShrink: 0 }}
-                                                    title="Delete chat"
-                                                >
-                                                    ✕
-                                                </button>
-                                            </div>
-                                        ))
-                                    )}
-                                </div>
+                        <Link href="/" style={{ color: "#94a3b8", textDecoration: "none", fontSize: "13px" }}>Home</Link>
+                        <Link href="/account/dashboard" style={{ color: "#94a3b8", textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
+                    </div>
+                </header>
+
+                {/* Requirements Tags */}
+                {(requirements.category || requirements.location) && (
+                    <div style={{ backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "10px 20px" }}>
+                        <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
+                            {requirements.category && (
+                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(34,197,94,0.1)", color: "#4ade80", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(34,197,94,0.2)" }}>
+                                    📦 {requirements.category}
+                                </span>
+                            )}
+                            {requirements.location && (
+                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(59,130,246,0.1)", color: "#60a5fa", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(59,130,246,0.2)" }}>
+                                    📍 {requirements.location}
+                                </span>
+                            )}
+                            {requirements.quantity && (
+                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(234,179,8,0.1)", color: "#facc15", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(234,179,8,0.2)" }}>
+                                    📊 {requirements.quantity}
+                                </span>
                             )}
                         </div>
-                        <Link href="/account/dashboard" style={{ color: "#64748b", textDecoration: "none" }}>Dashboard</Link>
-                        <button onClick={handleNewChat} style={{ color: "#3b82f6", background: "none", border: "none", cursor: "pointer", fontWeight: "500" }}>
-                            New Search
-                        </button>
                     </div>
-                </div>
-            </header>
+                )}
 
-            {/* Requirements Tags */}
-            {(requirements.category || requirements.location) && (
-                <div style={{ backgroundColor: "white", borderBottom: "1px solid #e2e8f0", padding: "10px 24px" }}>
-                    <div style={{ maxWidth: "900px", margin: "0 auto", display: "flex", gap: "8px", flexWrap: "wrap" }}>
-                        {requirements.category && (
-                            <span style={{ padding: "4px 12px", backgroundColor: "#dcfce7", color: "#15803d", borderRadius: "16px", fontSize: "12px" }}>
-                                📦 {requirements.category}
-                            </span>
-                        )}
-                        {requirements.location && (
-                            <span style={{ padding: "4px 12px", backgroundColor: "#dbeafe", color: "#1d4ed8", borderRadius: "16px", fontSize: "12px" }}>
-                                📍 {requirements.location}
-                            </span>
-                        )}
-                        {requirements.quantity && (
-                            <span style={{ padding: "4px 12px", backgroundColor: "#fef3c7", color: "#b45309", borderRadius: "16px", fontSize: "12px" }}>
-                                📊 {requirements.quantity}
-                            </span>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Messages */}
-            <main style={{ flex: 1, overflowY: "auto", padding: "20px" }}>
-                <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-                    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
-                        {messages.map((message) => (
-                            <div key={message.id}>
-                                <div style={{ display: "flex", justifyContent: message.role === "user" ? "flex-end" : "flex-start" }}>
-                                    <div style={{
-                                        maxWidth: "75%",
-                                        padding: "14px 18px",
-                                        borderRadius: "16px",
-                                        backgroundColor: message.role === "user" ? "#0f172a" : "white",
-                                        color: message.role === "user" ? "white" : "#0f172a",
-                                        boxShadow: message.role === "user" ? "none" : "0 2px 8px rgba(0,0,0,0.04)",
-                                        border: message.role === "user" ? "none" : "1px solid #e2e8f0",
-                                        fontSize: "14px",
-                                        lineHeight: "1.6"
-                                    }}>
-                                        <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.content}</p>
-                                    </div>
-                                </div>
-
-                                {/* Supplier Cards */}
-                                {message.suppliers && message.suppliers.length > 0 && (
-                                    <div style={{ marginTop: "16px", marginLeft: "0" }}>
-                                        <p style={{
-                                            margin: "0 0 12px",
-                                            fontSize: "14px",
-                                            fontWeight: "600",
-                                            color: "#0f172a"
-                                        }}>
-                                            🎯 Top {message.suppliers.length} Matching Suppliers
-                                        </p>
+                {/* Messages */}
+                <main style={{ flex: 1, overflowY: "auto", padding: "20px", backgroundColor: "#0f172a" }}>
+                    <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+                            {messages.map((message) => (
+                                <div key={message.id}>
+                                    <div style={{ display: "flex", justifyContent: message.role === "user" ? "flex-end" : "flex-start" }}>
                                         <div style={{
-                                            display: "grid",
-                                            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                                            gap: "12px"
+                                            maxWidth: "75%",
+                                            padding: "14px 18px",
+                                            borderRadius: message.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                                            backgroundColor: message.role === "user" ? "#3b82f6" : "#1e293b",
+                                            color: message.role === "user" ? "white" : "#e2e8f0",
+                                            border: message.role === "user" ? "none" : "1px solid #334155",
+                                            fontSize: "14px",
+                                            lineHeight: "1.6"
                                         }}>
-                                            {message.suppliers.map((supplier) => (
-                                                <SupplierCard
-                                                    key={supplier.id}
-                                                    supplier={supplier}
-                                                    onViewContact={handleViewContact}
-                                                    onSave={handleSaveSupplier}
-                                                    contactsRemaining={3 - contactsViewed}
-                                                />
-                                            ))}
-
+                                            <p style={{ margin: 0, whiteSpace: "pre-wrap" }}>{message.content}</p>
+                                            <p style={{
+                                                margin: "4px 0 0",
+                                                fontSize: "10px",
+                                                color: message.role === "user" ? "rgba(255,255,255,0.6)" : "#64748b"
+                                            }}>
+                                                {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                                            </p>
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        ))}
 
-                        {isTyping && (
-                            <div style={{ display: "flex", justifyContent: "flex-start" }}>
-                                <div style={{
-                                    padding: "14px 18px",
-                                    borderRadius: "16px",
-                                    backgroundColor: "white",
-                                    boxShadow: "0 2px 8px rgba(0,0,0,0.04)",
-                                    border: "1px solid #e2e8f0"
-                                }}>
-                                    <div style={{ display: "flex", gap: "5px" }}>
-                                        <div style={{ width: "7px", height: "7px", backgroundColor: "#94a3b8", borderRadius: "50%", animation: "bounce 1s infinite" }} />
-                                        <div style={{ width: "7px", height: "7px", backgroundColor: "#94a3b8", borderRadius: "50%", animation: "bounce 1s infinite 0.15s" }} />
-                                        <div style={{ width: "7px", height: "7px", backgroundColor: "#94a3b8", borderRadius: "50%", animation: "bounce 1s infinite 0.3s" }} />
+                                    {/* Supplier Cards */}
+                                    {message.suppliers && message.suppliers.length > 0 && (
+                                        <div style={{ marginTop: "16px" }}>
+                                            <p style={{
+                                                margin: "0 0 12px",
+                                                fontSize: "14px",
+                                                fontWeight: "600",
+                                                color: "#e2e8f0"
+                                            }}>
+                                                🎯 Top {message.suppliers.length} Matching Suppliers
+                                            </p>
+                                            <div style={{
+                                                display: "grid",
+                                                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+                                                gap: "12px"
+                                            }}>
+                                                {message.suppliers.map((supplier) => (
+                                                    <SupplierCard
+                                                        key={supplier.id}
+                                                        supplier={supplier}
+                                                        onViewContact={handleViewContact}
+                                                        onSave={handleSaveSupplier}
+                                                        contactsRemaining={3 - contactsViewed}
+                                                    />
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+
+                            {isTyping && (
+                                <div style={{ display: "flex", justifyContent: "flex-start" }}>
+                                    <div style={{
+                                        padding: "14px 18px",
+                                        borderRadius: "16px 16px 16px 4px",
+                                        backgroundColor: "#1e293b",
+                                        border: "1px solid #334155"
+                                    }}>
+                                        <div style={{ display: "flex", gap: "5px" }}>
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite" }} />
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite 0.15s" }} />
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite 0.3s" }} />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        )}
-                        <div ref={messagesEndRef} />
+                            )}
+                            <div ref={messagesEndRef} />
+                        </div>
                     </div>
-                </div>
-            </main>
+                </main>
 
-            {/* Input */}
-            <div style={{
-                position: "sticky",
-                bottom: 0,
-                backgroundColor: "white",
-                borderTop: "1px solid #e2e8f0",
-                padding: "14px 24px"
-            }}>
-                <div style={{ maxWidth: "900px", margin: "0 auto" }}>
-                    <div style={{ display: "flex", gap: "10px" }}>
-                        <input
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyPress={(e) => e.key === "Enter" && handleSend()}
-                            placeholder="Type your message..."
-                            style={{
-                                flex: 1,
-                                padding: "12px 18px",
-                                border: "1px solid #e2e8f0",
-                                borderRadius: "12px",
-                                fontSize: "14px",
-                                outline: "none",
-                                backgroundColor: "#f8fafc",
-                                color: "#0f172a"
-                            }}
-                        />
-                        <button
-                            onClick={() => handleSend()}
-                            disabled={!inputValue.trim()}
-                            style={{
-                                padding: "12px 20px",
-                                backgroundColor: inputValue.trim() ? "#0f172a" : "#e2e8f0",
-                                color: inputValue.trim() ? "white" : "#94a3b8",
-                                border: "none",
-                                borderRadius: "12px",
-                                cursor: inputValue.trim() ? "pointer" : "not-allowed",
-                                fontWeight: "500",
-                                fontSize: "14px"
-                            }}
-                        >
-                            Send
-                        </button>
+                {/* Input */}
+                <div style={{
+                    borderTop: "1px solid #1e293b",
+                    padding: "14px 20px",
+                    backgroundColor: "#0f172a"
+                }}>
+                    <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            <input
+                                type="text"
+                                value={inputValue}
+                                onChange={(e) => setInputValue(e.target.value)}
+                                onKeyDown={(e) => e.key === "Enter" && handleSend()}
+                                placeholder="Type your message..."
+                                style={{
+                                    flex: 1,
+                                    padding: "12px 18px",
+                                    border: "1px solid #334155",
+                                    borderRadius: "12px",
+                                    fontSize: "14px",
+                                    outline: "none",
+                                    backgroundColor: "#1e293b",
+                                    color: "white"
+                                }}
+                            />
+                            <button
+                                onClick={() => handleSend()}
+                                disabled={!inputValue.trim()}
+                                style={{
+                                    padding: "12px 20px",
+                                    backgroundColor: inputValue.trim() ? "#3b82f6" : "#334155",
+                                    color: inputValue.trim() ? "white" : "#64748b",
+                                    border: "none",
+                                    borderRadius: "12px",
+                                    cursor: inputValue.trim() ? "pointer" : "not-allowed",
+                                    fontWeight: "500",
+                                    fontSize: "14px"
+                                }}
+                            >
+                                Send
+                            </button>
+                        </div>
+                        <p style={{ textAlign: "center", fontSize: "11px", color: "#475569", marginTop: "8px" }}>
+                            Powered by Gemini AI • ChidiyaAI helps you find verified suppliers
+                        </p>
                     </div>
                 </div>
             </div>
@@ -1107,25 +1221,26 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     left: 0,
                     right: 0,
                     bottom: 0,
-                    backgroundColor: "rgba(0,0,0,0.5)",
+                    backgroundColor: "rgba(0,0,0,0.6)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 1000
                 }}>
                     <div style={{
-                        backgroundColor: "white",
+                        backgroundColor: "#1e293b",
                         borderRadius: "20px",
                         padding: "32px",
                         maxWidth: "400px",
                         width: "90%",
                         textAlign: "center",
-                        boxShadow: "0 20px 60px rgba(0,0,0,0.2)"
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
+                        border: "1px solid #334155"
                     }}>
                         <div style={{
                             width: "64px",
                             height: "64px",
-                            backgroundColor: "#fef3c7",
+                            backgroundColor: "rgba(234,179,8,0.1)",
                             borderRadius: "50%",
                             display: "flex",
                             alignItems: "center",
@@ -1139,38 +1254,39 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             margin: "0 0 12px",
                             fontSize: "22px",
                             fontWeight: "700",
-                            color: "#0f172a"
+                            color: "white"
                         }}>
                             Limit Reached!
                         </h2>
                         <p style={{
                             margin: "0 0 8px",
                             fontSize: "14px",
-                            color: "#64748b",
+                            color: "#94a3b8",
                             lineHeight: "1.6"
                         }}>
                             You&apos;ve used your free daily limit:
                         </p>
                         <div style={{
-                            backgroundColor: "#f8fafc",
+                            backgroundColor: "#0f172a",
                             borderRadius: "12px",
                             padding: "16px",
-                            margin: "16px 0"
+                            margin: "16px 0",
+                            border: "1px solid #334155"
                         }}>
-                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#64748b" }}>
+                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#94a3b8" }}>
                                 ✅ <strong>3 contacts</strong> per chat
                             </p>
-                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#64748b" }}>
+                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#94a3b8" }}>
                                 ✅ <strong>5 contacts</strong> per day
                             </p>
-                            <p style={{ margin: "0", fontSize: "13px", color: "#64748b" }}>
+                            <p style={{ margin: "0", fontSize: "13px", color: "#94a3b8" }}>
                                 ✅ <strong>3 queries</strong> per day
                             </p>
                         </div>
                         <p style={{
                             margin: "16px 0",
                             fontSize: "14px",
-                            color: "#0f172a",
+                            color: "white",
                             fontWeight: "500"
                         }}>
                             Upgrade for <strong>unlimited access</strong>!
@@ -1181,7 +1297,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             style={{
                                 width: "100%",
                                 padding: "14px",
-                                backgroundColor: subLoading ? "#64748b" : "#0f172a",
+                                backgroundColor: subLoading ? "#475569" : "#3b82f6",
                                 color: "white",
                                 border: "none",
                                 borderRadius: "12px",
@@ -1199,7 +1315,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 width: "100%",
                                 padding: "12px",
                                 backgroundColor: "transparent",
-                                color: "#64748b",
+                                color: "#94a3b8",
                                 border: "none",
                                 fontSize: "14px",
                                 cursor: "pointer"
@@ -1210,7 +1326,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                         <p style={{
                             margin: "16px 0 0",
                             fontSize: "12px",
-                            color: "#94a3b8",
+                            color: "#64748b",
                             textAlign: "center"
                         }}>
                             If it&apos;s a mistake,{" "}
