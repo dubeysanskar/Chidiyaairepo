@@ -16,11 +16,32 @@ export async function GET(request: NextRequest) {
 
         if (!buyer) {
             return NextResponse.json({
+                success: true,
                 chatSessions: [],
                 savedSuppliers: [],
-                recentActivity: []
+                recentActivity: [],
+                profile: null
             });
         }
+
+        // Determine limits based on subscription
+        const DAILY_QUERY_LIMIT = buyer.isSubscribed ? 50 : 3;
+        const DAILY_CONTACT_LIMIT = buyer.isSubscribed ? 50 : 5;
+
+        // Compute searches used today
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const searchesUsedToday = buyer.lastQueryDate && buyer.lastQueryDate >= today
+            ? buyer.dailyQueryCount
+            : 0;
+
+        // Compute contacts viewed today
+        const contactsToday = await prisma.supplierContactLog.count({
+            where: {
+                buyerId: buyer.id,
+                viewedAt: { gte: today },
+            },
+        });
 
         // Get chat sessions
         const chatSessions = await prisma.chatSession.findMany({
@@ -66,17 +87,21 @@ export async function GET(request: NextRequest) {
         const contactSupplierIds = contactLogs.map(c => c.supplierId);
         const contactedSuppliers = await prisma.supplier.findMany({
             where: { id: { in: contactSupplierIds } },
-            select: { id: true, companyName: true },
+            select: { id: true, companyName: true, phone: true },
         });
 
         const supplierMap = new Map(contactedSuppliers.map(s => [s.id, s]));
 
-        const recentActivity = contactLogs.map(log => ({
-            type: "contact_viewed",
-            supplierId: log.supplierId,
-            supplierName: supplierMap.get(log.supplierId)?.companyName || "Unknown",
-            timestamp: log.viewedAt,
-        }));
+        const recentActivity = contactLogs.map(log => {
+            const supplier = supplierMap.get(log.supplierId);
+            return {
+                type: "contact_viewed",
+                supplierId: log.supplierId,
+                supplierName: supplier?.companyName || "Unknown",
+                supplierPhone: supplier?.phone || null,
+                timestamp: log.viewedAt,
+            };
+        });
 
         return NextResponse.json({
             success: true,
@@ -92,6 +117,15 @@ export async function GET(request: NextRequest) {
             })),
             savedSuppliers: suppliers,
             recentActivity,
+            profile: {
+                email: buyer.email,
+                searchesUsed: searchesUsedToday,
+                searchLimit: DAILY_QUERY_LIMIT,
+                contactsUsed: contactsToday,
+                contactLimit: DAILY_CONTACT_LIMIT,
+                isPro: buyer.isSubscribed,
+                proExpiry: buyer.subscriptionExpiry,
+            },
         });
     } catch (error) {
         console.error("Dashboard data error:", error);

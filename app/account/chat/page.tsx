@@ -113,6 +113,61 @@ function ChatContent() {
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
     const [showHistoryDropdown, setShowHistoryDropdown] = useState(true);
 
+    // Theme state — light by default
+    const [darkMode, setDarkMode] = useState(false);
+
+    // User limits for profile section
+    const [userLimits, setUserLimits] = useState<{
+        searchesUsed: number; searchLimit: number;
+        contactsUsed: number; contactLimit: number;
+        isPro: boolean; proExpiry: string | null;
+    }>({ searchesUsed: 0, searchLimit: 3, contactsUsed: 0, contactLimit: 5, isPro: false, proExpiry: null });
+
+    // Load dark mode preference from localStorage
+    useEffect(() => {
+        try {
+            const saved = localStorage.getItem("chidiyaai_dark_mode");
+            if (saved === "true") setDarkMode(true);
+        } catch { /* ignore */ }
+    }, []);
+
+    const toggleDarkMode = () => {
+        setDarkMode(prev => {
+            const next = !prev;
+            try { localStorage.setItem("chidiyaai_dark_mode", String(next)); } catch { /* ignore */ }
+            return next;
+        });
+    };
+
+    // Theme colors
+    const t = {
+        bg: darkMode ? "#0f172a" : "#ffffff",
+        bgSecondary: darkMode ? "#1e293b" : "#f8fafc",
+        bgTertiary: darkMode ? "#334155" : "#e2e8f0",
+        border: darkMode ? "#334155" : "#e2e8f0",
+        borderLight: darkMode ? "#1e293b" : "#f1f5f9",
+        text: darkMode ? "#e2e8f0" : "#1e293b",
+        textSecondary: darkMode ? "#94a3b8" : "#64748b",
+        textMuted: darkMode ? "#64748b" : "#94a3b8",
+        userBubble: "#3b82f6",
+        aiBubble: darkMode ? "#1e293b" : "#f1f5f9",
+        aiBubbleBorder: darkMode ? "#334155" : "#e2e8f0",
+        aiBubbleText: darkMode ? "#e2e8f0" : "#1e293b",
+        inputBg: darkMode ? "#1e293b" : "#ffffff",
+        inputBorder: darkMode ? "#334155" : "#d1d5db",
+        sidebarActive: darkMode ? "#334155" : "#e2e8f0",
+        sidebarHover: darkMode ? "#1e293b80" : "#f1f5f9",
+        tagBg: darkMode ? "rgba(34,197,94,0.1)" : "#dcfce7",
+        tagColor: darkMode ? "#4ade80" : "#15803d",
+        tagBlueBg: darkMode ? "rgba(59,130,246,0.1)" : "#dbeafe",
+        tagBlueColor: darkMode ? "#60a5fa" : "#1d4ed8",
+        tagYellowBg: darkMode ? "rgba(234,179,8,0.1)" : "#fef3c7",
+        tagYellowColor: darkMode ? "#facc15" : "#b45309",
+        modalBg: darkMode ? "#1e293b" : "#ffffff",
+        modalBorder: darkMode ? "#334155" : "#e2e8f0",
+        modalInfoBg: darkMode ? "#0f172a" : "#f8fafc",
+    };
+
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [subLoading, setSubLoading] = useState(false);
 
@@ -869,23 +924,24 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             height: "100vh",
             display: "flex",
             fontFamily: "'Inter', system-ui, sans-serif",
-            backgroundColor: "#0f172a",
-            overflow: "hidden"
+            backgroundColor: t.bg,
+            overflow: "hidden",
+            transition: "background-color 0.3s ease"
         }}>
             {/* ============ SIDEBAR ============ */}
             <div style={{
                 width: showHistoryDropdown ? "280px" : "0px",
                 minWidth: showHistoryDropdown ? "280px" : "0px",
                 transition: "all 0.3s ease",
-                backgroundColor: "#1e293b",
-                borderRight: showHistoryDropdown ? "1px solid #334155" : "none",
+                backgroundColor: t.bgSecondary,
+                borderRight: showHistoryDropdown ? `1px solid ${t.border}` : "none",
                 display: "flex",
                 flexDirection: "column",
                 overflow: "hidden",
                 flexShrink: 0
             }}>
                 {/* Sidebar Header */}
-                <div style={{ padding: "16px", borderBottom: "1px solid #334155" }}>
+                <div style={{ padding: "16px", borderBottom: `1px solid ${t.border}` }}>
                     <button
                         onClick={handleNewChat}
                         style={{
@@ -894,10 +950,10 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             alignItems: "center",
                             gap: "10px",
                             padding: "12px 16px",
-                            backgroundColor: "#334155",
-                            border: "1px solid #475569",
+                            backgroundColor: t.bgTertiary,
+                            border: `1px solid ${t.border}`,
                             borderRadius: "12px",
-                            color: "white",
+                            color: t.text,
                             fontSize: "14px",
                             fontWeight: "500",
                             cursor: "pointer"
@@ -912,7 +968,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                 <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
                     {chatHistory.length === 0 ? (
                         <div style={{ padding: "16px", textAlign: "center" }}>
-                            <p style={{ color: "#64748b", fontSize: "12px" }}>No chat history yet</p>
+                            <p style={{ color: t.textMuted, fontSize: "12px" }}>No chat history yet</p>
                         </div>
                     ) : (
                         groupOrder.map(group =>
@@ -922,7 +978,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                         padding: "8px 12px",
                                         fontSize: "10px",
                                         fontWeight: "600",
-                                        color: "#64748b",
+                                        color: t.textMuted,
                                         textTransform: "uppercase",
                                         letterSpacing: "0.05em",
                                         margin: 0
@@ -940,12 +996,12 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                 borderRadius: "8px",
                                                 cursor: "pointer",
                                                 marginBottom: "2px",
-                                                backgroundColor: currentSessionId === item.id ? "#334155" : "transparent",
-                                                color: currentSessionId === item.id ? "white" : "#94a3b8"
+                                                backgroundColor: currentSessionId === item.id ? t.sidebarActive : "transparent",
+                                                color: currentSessionId === item.id ? t.text : t.textSecondary
                                             }}
                                             onClick={() => loadChatFromHistory(item)}
                                             onMouseEnter={(e) => {
-                                                if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = "#1e293b80";
+                                                if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = t.sidebarHover;
                                             }}
                                             onMouseLeave={(e) => {
                                                 if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = "transparent";
@@ -963,7 +1019,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                     {item.category || "General Chat"}
                                                 </p>
                                                 {item.location && (
-                                                    <p style={{ margin: "2px 0 0", fontSize: "10px", color: "#64748b" }}>
+                                                    <p style={{ margin: "2px 0 0", fontSize: "10px", color: t.textMuted }}>
                                                         📍 {item.location}
                                                     </p>
                                                 )}
@@ -974,7 +1030,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                     background: "none",
                                                     border: "none",
                                                     cursor: "pointer",
-                                                    color: "#64748b",
+                                                    color: t.textMuted,
                                                     fontSize: "12px",
                                                     padding: "4px",
                                                     flexShrink: 0,
@@ -992,18 +1048,157 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     )}
                 </div>
 
-                {/* Sidebar Footer */}
-                <div style={{ padding: "12px", borderTop: "1px solid #334155" }}>
+                {/* Profile / Limits Section */}
+                <div style={{
+                    padding: "12px",
+                    borderTop: `1px solid ${t.border}`,
+                    backgroundColor: t.bgSecondary
+                }}>
+                    {user && (
+                        <div style={{ marginBottom: "12px" }}>
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "10px",
+                                padding: "8px 12px",
+                                borderRadius: "10px",
+                                backgroundColor: t.bgTertiary,
+                                marginBottom: "8px"
+                            }}>
+                                <div style={{
+                                    width: "32px", height: "32px",
+                                    borderRadius: "50%",
+                                    background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                    display: "flex", alignItems: "center", justifyContent: "center",
+                                    color: "white", fontSize: "14px", fontWeight: "600",
+                                    flexShrink: 0
+                                }}>
+                                    {user.email.charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ flex: 1, minWidth: 0 }}>
+                                    <p style={{
+                                        margin: 0, fontSize: "12px", fontWeight: "600", color: t.text,
+                                        overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap"
+                                    }}>
+                                        {user.email}
+                                    </p>
+                                    <p style={{ margin: "2px 0 0", fontSize: "10px", color: t.textMuted }}>
+                                        {userLimits.isPro ? "⭐ Pro" : "Free Plan"}
+                                    </p>
+                                </div>
+                            </div>
+                            {/* Daily Limits */}
+                            <div style={{ padding: "0 4px" }}>
+                                <div style={{ marginBottom: "6px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: t.textSecondary, marginBottom: "3px" }}>
+                                        <span>Searches</span>
+                                        <span>{userLimits.searchesUsed}/{userLimits.searchLimit}</span>
+                                    </div>
+                                    <div style={{ height: "4px", backgroundColor: t.bgTertiary, borderRadius: "2px", overflow: "hidden" }}>
+                                        <div style={{
+                                            height: "100%",
+                                            width: `${Math.min(100, (userLimits.searchesUsed / userLimits.searchLimit) * 100)}%`,
+                                            backgroundColor: userLimits.searchesUsed >= userLimits.searchLimit ? "#ef4444" : "#3b82f6",
+                                            borderRadius: "2px",
+                                            transition: "width 0.3s ease"
+                                        }} />
+                                    </div>
+                                </div>
+                                <div style={{ marginBottom: "8px" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", color: t.textSecondary, marginBottom: "3px" }}>
+                                        <span>Contacts</span>
+                                        <span>{userLimits.contactsUsed}/{userLimits.contactLimit}</span>
+                                    </div>
+                                    <div style={{ height: "4px", backgroundColor: t.bgTertiary, borderRadius: "2px", overflow: "hidden" }}>
+                                        <div style={{
+                                            height: "100%",
+                                            width: `${Math.min(100, (userLimits.contactsUsed / userLimits.contactLimit) * 100)}%`,
+                                            backgroundColor: userLimits.contactsUsed >= userLimits.contactLimit ? "#ef4444" : "#22c55e",
+                                            borderRadius: "2px",
+                                            transition: "width 0.3s ease"
+                                        }} />
+                                    </div>
+                                </div>
+                            </div>
+                            {!userLimits.isPro && (
+                                <button
+                                    onClick={() => setShowSubscriptionPrompt(true)}
+                                    style={{
+                                        width: "100%",
+                                        padding: "8px 12px",
+                                        background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                        color: "white",
+                                        border: "none",
+                                        borderRadius: "8px",
+                                        fontSize: "12px",
+                                        fontWeight: "600",
+                                        cursor: "pointer",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        gap: "6px"
+                                    }}
+                                >
+                                    ⚡ Go Pro — ₹499/mo
+                                </button>
+                            )}
+                            {userLimits.isPro && userLimits.proExpiry && (
+                                <p style={{ margin: 0, fontSize: "10px", color: t.textMuted, textAlign: "center" }}>
+                                    Pro expires: {new Date(userLimits.proExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                                </p>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Theme Toggle */}
+                    <button
+                        onClick={toggleDarkMode}
+                        style={{
+                            width: "100%",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "space-between",
+                            padding: "8px 12px",
+                            background: "none",
+                            border: "none",
+                            cursor: "pointer",
+                            borderRadius: "8px",
+                            color: t.textSecondary,
+                            fontSize: "13px"
+                        }}
+                    >
+                        <span>{darkMode ? "🌙 Dark Mode" : "☀️ Light Mode"}</span>
+                        <span style={{
+                            width: "36px", height: "20px",
+                            backgroundColor: darkMode ? "#3b82f6" : t.bgTertiary,
+                            borderRadius: "10px",
+                            position: "relative",
+                            transition: "background-color 0.3s ease"
+                        }}>
+                            <span style={{
+                                width: "16px", height: "16px",
+                                backgroundColor: "white",
+                                borderRadius: "50%",
+                                position: "absolute",
+                                top: "2px",
+                                left: darkMode ? "18px" : "2px",
+                                transition: "left 0.3s ease",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.2)"
+                            }} />
+                        </span>
+                    </button>
+
+                    {/* Nav Links */}
                     <Link href="/" style={{
                         display: "flex", alignItems: "center", gap: "8px",
-                        padding: "8px 12px", color: "#94a3b8", textDecoration: "none",
+                        padding: "8px 12px", color: t.textSecondary, textDecoration: "none",
                         fontSize: "13px", borderRadius: "8px"
                     }}>
                         🏠 Home
                     </Link>
                     <Link href="/account/dashboard" style={{
                         display: "flex", alignItems: "center", gap: "8px",
-                        padding: "8px 12px", color: "#94a3b8", textDecoration: "none",
+                        padding: "8px 12px", color: t.textSecondary, textDecoration: "none",
                         fontSize: "13px", borderRadius: "8px"
                     }}>
                         📊 Dashboard
@@ -1019,8 +1214,9 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     alignItems: "center",
                     justifyContent: "space-between",
                     padding: "12px 20px",
-                    borderBottom: "1px solid #1e293b",
-                    backgroundColor: "#0f172a"
+                    borderBottom: `1px solid ${t.border}`,
+                    backgroundColor: t.bg,
+                    transition: "background-color 0.3s ease"
                 }}>
                     <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                         {/* Sidebar toggle */}
@@ -1031,7 +1227,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 background: "none",
                                 border: "none",
                                 cursor: "pointer",
-                                color: "#94a3b8",
+                                color: t.textSecondary,
                                 fontSize: "18px",
                                 borderRadius: "8px",
                                 display: "flex",
@@ -1048,7 +1244,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 height={32}
                                 style={{ width: "32px", height: "32px" }}
                             />
-                            <span style={{ fontSize: "17px", fontWeight: "bold", color: "white" }}>
+                            <span style={{ fontSize: "17px", fontWeight: "bold", color: t.text }}>
                                 Chidiya<span style={{ color: "#3b82f6" }}>AI</span>
                             </span>
                         </Link>
@@ -1056,27 +1252,27 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     </div>
                     <div style={{ display: "flex", gap: "16px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
-                        <Link href="/" style={{ color: "#94a3b8", textDecoration: "none", fontSize: "13px" }}>Home</Link>
-                        <Link href="/account/dashboard" style={{ color: "#94a3b8", textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
+                        <Link href="/" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Home</Link>
+                        <Link href="/account/dashboard" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
                     </div>
                 </header>
 
                 {/* Requirements Tags */}
                 {(requirements.category || requirements.location) && (
-                    <div style={{ backgroundColor: "#1e293b", borderBottom: "1px solid #334155", padding: "10px 20px" }}>
+                    <div style={{ backgroundColor: t.bgSecondary, borderBottom: `1px solid ${t.border}`, padding: "10px 20px" }}>
                         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
                             {requirements.category && (
-                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(34,197,94,0.1)", color: "#4ade80", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(34,197,94,0.2)" }}>
+                                <span style={{ padding: "4px 12px", backgroundColor: t.tagBg, color: t.tagColor, borderRadius: "16px", fontSize: "12px", border: `1px solid ${darkMode ? "rgba(34,197,94,0.2)" : "#bbf7d0"}` }}>
                                     📦 {requirements.category}
                                 </span>
                             )}
                             {requirements.location && (
-                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(59,130,246,0.1)", color: "#60a5fa", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(59,130,246,0.2)" }}>
+                                <span style={{ padding: "4px 12px", backgroundColor: t.tagBlueBg, color: t.tagBlueColor, borderRadius: "16px", fontSize: "12px", border: `1px solid ${darkMode ? "rgba(59,130,246,0.2)" : "#bfdbfe"}` }}>
                                     📍 {requirements.location}
                                 </span>
                             )}
                             {requirements.quantity && (
-                                <span style={{ padding: "4px 12px", backgroundColor: "rgba(234,179,8,0.1)", color: "#facc15", borderRadius: "16px", fontSize: "12px", border: "1px solid rgba(234,179,8,0.2)" }}>
+                                <span style={{ padding: "4px 12px", backgroundColor: t.tagYellowBg, color: t.tagYellowColor, borderRadius: "16px", fontSize: "12px", border: `1px solid ${darkMode ? "rgba(234,179,8,0.2)" : "#fde68a"}` }}>
                                     📊 {requirements.quantity}
                                 </span>
                             )}
@@ -1085,7 +1281,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                 )}
 
                 {/* Messages */}
-                <main style={{ flex: 1, overflowY: "auto", padding: "20px", backgroundColor: "#0f172a" }}>
+                <main style={{ flex: 1, overflowY: "auto", padding: "20px", backgroundColor: t.bg, transition: "background-color 0.3s ease" }}>
                     <div style={{ maxWidth: "800px", margin: "0 auto" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                             {messages.map((message) => (
@@ -1095,9 +1291,9 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                             maxWidth: "75%",
                                             padding: "14px 18px",
                                             borderRadius: message.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                                            backgroundColor: message.role === "user" ? "#3b82f6" : "#1e293b",
-                                            color: message.role === "user" ? "white" : "#e2e8f0",
-                                            border: message.role === "user" ? "none" : "1px solid #334155",
+                                            backgroundColor: message.role === "user" ? t.userBubble : t.aiBubble,
+                                            color: message.role === "user" ? "white" : t.aiBubbleText,
+                                            border: message.role === "user" ? "none" : `1px solid ${t.aiBubbleBorder}`,
                                             fontSize: "14px",
                                             lineHeight: "1.6"
                                         }}>
@@ -1105,7 +1301,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                             <p style={{
                                                 margin: "4px 0 0",
                                                 fontSize: "10px",
-                                                color: message.role === "user" ? "rgba(255,255,255,0.6)" : "#64748b"
+                                                color: message.role === "user" ? "rgba(255,255,255,0.6)" : t.textMuted
                                             }}>
                                                 {message.timestamp.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                                             </p>
@@ -1119,7 +1315,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                 margin: "0 0 12px",
                                                 fontSize: "14px",
                                                 fontWeight: "600",
-                                                color: "#e2e8f0"
+                                                color: t.text
                                             }}>
                                                 🎯 Top {message.suppliers.length} Matching Suppliers
                                             </p>
@@ -1148,13 +1344,13 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                     <div style={{
                                         padding: "14px 18px",
                                         borderRadius: "16px 16px 16px 4px",
-                                        backgroundColor: "#1e293b",
-                                        border: "1px solid #334155"
+                                        backgroundColor: t.aiBubble,
+                                        border: `1px solid ${t.aiBubbleBorder}`
                                     }}>
                                         <div style={{ display: "flex", gap: "5px" }}>
-                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite" }} />
-                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite 0.15s" }} />
-                                            <div style={{ width: "7px", height: "7px", backgroundColor: "#64748b", borderRadius: "50%", animation: "bounce 1s infinite 0.3s" }} />
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: t.textMuted, borderRadius: "50%", animation: "bounce 1s infinite" }} />
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: t.textMuted, borderRadius: "50%", animation: "bounce 1s infinite 0.15s" }} />
+                                            <div style={{ width: "7px", height: "7px", backgroundColor: t.textMuted, borderRadius: "50%", animation: "bounce 1s infinite 0.3s" }} />
                                         </div>
                                     </div>
                                 </div>
@@ -1166,9 +1362,10 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
 
                 {/* Input */}
                 <div style={{
-                    borderTop: "1px solid #1e293b",
+                    borderTop: `1px solid ${t.border}`,
                     padding: "14px 20px",
-                    backgroundColor: "#0f172a"
+                    backgroundColor: t.bg,
+                    transition: "background-color 0.3s ease"
                 }}>
                     <div style={{ maxWidth: "800px", margin: "0 auto" }}>
                         <div style={{ display: "flex", gap: "10px" }}>
@@ -1181,12 +1378,13 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 style={{
                                     flex: 1,
                                     padding: "12px 18px",
-                                    border: "1px solid #334155",
+                                    border: `1px solid ${t.inputBorder}`,
                                     borderRadius: "12px",
                                     fontSize: "14px",
                                     outline: "none",
-                                    backgroundColor: "#1e293b",
-                                    color: "white"
+                                    backgroundColor: t.inputBg,
+                                    color: t.text,
+                                    transition: "all 0.3s ease"
                                 }}
                             />
                             <button
@@ -1194,8 +1392,8 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 disabled={!inputValue.trim()}
                                 style={{
                                     padding: "12px 20px",
-                                    backgroundColor: inputValue.trim() ? "#3b82f6" : "#334155",
-                                    color: inputValue.trim() ? "white" : "#64748b",
+                                    backgroundColor: inputValue.trim() ? "#3b82f6" : t.bgTertiary,
+                                    color: inputValue.trim() ? "white" : t.textMuted,
                                     border: "none",
                                     borderRadius: "12px",
                                     cursor: inputValue.trim() ? "pointer" : "not-allowed",
@@ -1206,7 +1404,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 Send
                             </button>
                         </div>
-                        <p style={{ textAlign: "center", fontSize: "11px", color: "#475569", marginTop: "8px" }}>
+                        <p style={{ textAlign: "center", fontSize: "11px", color: t.textMuted, marginTop: "8px" }}>
                             Powered by Gemini AI • ChidiyaAI helps you find verified suppliers
                         </p>
                     </div>
@@ -1217,78 +1415,57 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             {showSubscriptionPrompt && (
                 <div style={{
                     position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
-                    backgroundColor: "rgba(0,0,0,0.6)",
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.5)",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
                     zIndex: 1000
                 }}>
                     <div style={{
-                        backgroundColor: "#1e293b",
+                        backgroundColor: t.modalBg,
                         borderRadius: "20px",
                         padding: "32px",
                         maxWidth: "400px",
                         width: "90%",
                         textAlign: "center",
-                        boxShadow: "0 20px 60px rgba(0,0,0,0.4)",
-                        border: "1px solid #334155"
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.3)",
+                        border: `1px solid ${t.modalBorder}`
                     }}>
                         <div style={{
-                            width: "64px",
-                            height: "64px",
-                            backgroundColor: "rgba(234,179,8,0.1)",
+                            width: "64px", height: "64px",
+                            backgroundColor: t.tagYellowBg,
                             borderRadius: "50%",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
+                            display: "flex", alignItems: "center", justifyContent: "center",
                             margin: "0 auto 20px",
                             fontSize: "28px"
                         }}>
                             🔒
                         </div>
-                        <h2 style={{
-                            margin: "0 0 12px",
-                            fontSize: "22px",
-                            fontWeight: "700",
-                            color: "white"
-                        }}>
+                        <h2 style={{ margin: "0 0 12px", fontSize: "22px", fontWeight: "700", color: t.text }}>
                             Limit Reached!
                         </h2>
-                        <p style={{
-                            margin: "0 0 8px",
-                            fontSize: "14px",
-                            color: "#94a3b8",
-                            lineHeight: "1.6"
-                        }}>
+                        <p style={{ margin: "0 0 8px", fontSize: "14px", color: t.textSecondary, lineHeight: "1.6" }}>
                             You&apos;ve used your free daily limit:
                         </p>
                         <div style={{
-                            backgroundColor: "#0f172a",
+                            backgroundColor: t.modalInfoBg,
                             borderRadius: "12px",
                             padding: "16px",
                             margin: "16px 0",
-                            border: "1px solid #334155"
+                            border: `1px solid ${t.modalBorder}`
                         }}>
-                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#94a3b8" }}>
+                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: t.textSecondary }}>
                                 ✅ <strong>3 contacts</strong> per chat
                             </p>
-                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: "#94a3b8" }}>
+                            <p style={{ margin: "0 0 8px", fontSize: "13px", color: t.textSecondary }}>
                                 ✅ <strong>5 contacts</strong> per day
                             </p>
-                            <p style={{ margin: "0", fontSize: "13px", color: "#94a3b8" }}>
+                            <p style={{ margin: "0", fontSize: "13px", color: t.textSecondary }}>
                                 ✅ <strong>3 queries</strong> per day
                             </p>
                         </div>
-                        <p style={{
-                            margin: "16px 0",
-                            fontSize: "14px",
-                            color: "white",
-                            fontWeight: "500"
-                        }}>
+                        <p style={{ margin: "16px 0", fontSize: "14px", color: t.text, fontWeight: "500" }}>
                             Upgrade for <strong>unlimited access</strong>!
                         </p>
                         <button
@@ -1297,7 +1474,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             style={{
                                 width: "100%",
                                 padding: "14px",
-                                backgroundColor: subLoading ? "#475569" : "#3b82f6",
+                                backgroundColor: subLoading ? t.bgTertiary : "#3b82f6",
                                 color: "white",
                                 border: "none",
                                 borderRadius: "12px",
@@ -1315,7 +1492,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                 width: "100%",
                                 padding: "12px",
                                 backgroundColor: "transparent",
-                                color: "#94a3b8",
+                                color: t.textSecondary,
                                 border: "none",
                                 fontSize: "14px",
                                 cursor: "pointer"
@@ -1323,17 +1500,9 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                         >
                             Maybe Later
                         </button>
-                        <p style={{
-                            margin: "16px 0 0",
-                            fontSize: "12px",
-                            color: "#64748b",
-                            textAlign: "center"
-                        }}>
+                        <p style={{ margin: "16px 0 0", fontSize: "12px", color: t.textMuted, textAlign: "center" }}>
                             If it&apos;s a mistake,{" "}
-                            <a
-                                href="mailto:support@chidiyaai.com"
-                                style={{ color: "#3b82f6", textDecoration: "underline" }}
-                            >
+                            <a href="mailto:support@chidiyaai.com" style={{ color: "#3b82f6", textDecoration: "underline" }}>
                                 contact us
                             </a>
                         </p>

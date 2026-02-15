@@ -35,7 +35,18 @@ interface Activity {
     type: string;
     supplierId: string;
     supplierName: string;
+    supplierPhone?: string;
     timestamp: string;
+}
+
+interface UserProfile {
+    email: string;
+    searchesUsed: number;
+    searchLimit: number;
+    contactsUsed: number;
+    contactLimit: number;
+    isPro: boolean;
+    proExpiry: string | null;
 }
 
 export default function BuyerDashboard() {
@@ -44,6 +55,7 @@ export default function BuyerDashboard() {
     const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"inquiries" | "saved" | "history">("inquiries");
+    const [profile, setProfile] = useState<UserProfile | null>(null);
 
     useEffect(() => {
         fetchDashboardData();
@@ -57,6 +69,7 @@ export default function BuyerDashboard() {
                 setChatSessions(data.chatSessions || []);
                 setSavedSuppliers(data.savedSuppliers || []);
                 setRecentActivity(data.recentActivity || []);
+                if (data.profile) setProfile(data.profile);
             }
         } catch (error) {
             console.error("Failed to fetch dashboard data:", error);
@@ -112,9 +125,76 @@ export default function BuyerDashboard() {
                 <h1 style={{ fontSize: "28px", fontWeight: "700", color: "#0f172a", margin: "0 0 8px" }}>
                     Buyer Dashboard
                 </h1>
-                <p style={{ fontSize: "15px", color: "#64748b", margin: "0 0 32px" }}>
+                <p style={{ fontSize: "15px", color: "#64748b", margin: "0 0 24px" }}>
                     Manage your sourcing requests and supplier connections
                 </p>
+
+                {/* Profile Stats Card */}
+                {profile && (
+                    <div style={{
+                        background: "linear-gradient(135deg, #1e293b 0%, #334155 100%)",
+                        borderRadius: "16px",
+                        padding: "24px",
+                        marginBottom: "28px",
+                        color: "white",
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        flexWrap: "wrap",
+                        gap: "16px"
+                    }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "14px" }}>
+                            <div style={{
+                                width: "48px", height: "48px",
+                                borderRadius: "50%",
+                                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                fontSize: "20px", fontWeight: "700",
+                                flexShrink: 0
+                            }}>
+                                {profile.email.charAt(0).toUpperCase()}
+                            </div>
+                            <div>
+                                <p style={{ margin: 0, fontSize: "16px", fontWeight: "600" }}>{profile.email}</p>
+                                <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#94a3b8" }}>
+                                    {profile.isPro ? `⭐ Pro Plan` : "Free Plan"}
+                                    {profile.isPro && profile.proExpiry && ` • Expires ${new Date(profile.proExpiry).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}`}
+                                </p>
+                            </div>
+                        </div>
+                        <div style={{ display: "flex", gap: "24px", flexWrap: "wrap" }}>
+                            <div style={{ textAlign: "center" }}>
+                                <p style={{ margin: 0, fontSize: "22px", fontWeight: "700" }}>{profile.searchesUsed}/{profile.searchLimit}</p>
+                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#94a3b8" }}>Daily Searches</p>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                                <p style={{ margin: 0, fontSize: "22px", fontWeight: "700" }}>{profile.contactsUsed}/{profile.contactLimit}</p>
+                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#94a3b8" }}>Contacts Viewed</p>
+                            </div>
+                            <div style={{ textAlign: "center" }}>
+                                <p style={{ margin: 0, fontSize: "22px", fontWeight: "700" }}>{savedSuppliers.length}</p>
+                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: "#94a3b8" }}>Saved Suppliers</p>
+                            </div>
+                        </div>
+                        {!profile.isPro && (
+                            <Link href="/account/chat" style={{
+                                padding: "10px 20px",
+                                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                color: "white",
+                                borderRadius: "10px",
+                                textDecoration: "none",
+                                fontSize: "13px",
+                                fontWeight: "600",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "6px",
+                                whiteSpace: "nowrap"
+                            }}>
+                                ⚡ Go Pro — ₹499/mo
+                            </Link>
+                        )}
+                    </div>
+                )}
 
                 {/* Tabs */}
                 <div style={{ display: "flex", gap: "8px", marginBottom: "24px", borderBottom: "1px solid #e2e8f0", paddingBottom: "0" }}>
@@ -242,16 +322,6 @@ export default function BuyerDashboard() {
                                                     >
                                                         💬 Continue
                                                     </Link>
-                                                    <span style={{
-                                                        padding: "4px 10px",
-                                                        backgroundColor: session.status === "active" ? "#dcfce7" : "#f1f5f9",
-                                                        color: session.status === "active" ? "#15803d" : "#64748b",
-                                                        borderRadius: "8px",
-                                                        fontSize: "12px",
-                                                        fontWeight: "500"
-                                                    }}>
-                                                        {session.status === "active" ? "Active" : "Completed"}
-                                                    </span>
                                                 </div>
                                             </div>
                                         ))}
@@ -293,35 +363,79 @@ export default function BuyerDashboard() {
                                         {savedSuppliers.map(supplier => (
                                             <div key={supplier.id} style={{
                                                 backgroundColor: "white",
-                                                borderRadius: "12px",
+                                                borderRadius: "14px",
                                                 border: "1px solid #e2e8f0",
-                                                padding: "20px"
+                                                overflow: "hidden",
+                                                boxShadow: "0 2px 8px rgba(0,0,0,0.04)"
                                             }}>
-                                                <h3 style={{ margin: "0 0 8px", fontSize: "16px", fontWeight: "600", color: "#0f172a" }}>
-                                                    📦 {supplier.companyName}
-                                                </h3>
-                                                <p style={{ margin: "0 0 12px", fontSize: "13px", color: "#64748b" }}>
-                                                    📍 {supplier.city || "India"}
-                                                </p>
-                                                {supplier.badges && supplier.badges.length > 0 && (
-                                                    <div style={{ display: "flex", gap: "6px", marginBottom: "12px" }}>
-                                                        {supplier.badges.includes("verified") && (
-                                                            <span style={{ padding: "3px 8px", backgroundColor: "#dcfce7", color: "#15803d", borderRadius: "6px", fontSize: "11px" }}>
-                                                                ✓ Verified
-                                                            </span>
-                                                        )}
-                                                        {supplier.badges.includes("gst") && (
-                                                            <span style={{ padding: "3px 8px", backgroundColor: "#dbeafe", color: "#1d4ed8", borderRadius: "6px", fontSize: "11px" }}>
-                                                                GST
-                                                            </span>
-                                                        )}
-                                                    </div>
-                                                )}
-                                                {supplier.phone && (
-                                                    <p style={{ margin: 0, fontSize: "14px", fontWeight: "500", color: "#15803d" }}>
-                                                        📞 {supplier.phone}
+                                                {/* Card Header */}
+                                                <div style={{
+                                                    background: "linear-gradient(135deg, #1e293b, #334155)",
+                                                    padding: "16px 20px",
+                                                    color: "white"
+                                                }}>
+                                                    <h3 style={{ margin: 0, fontSize: "15px", fontWeight: "600" }}>
+                                                        {supplier.companyName}
+                                                    </h3>
+                                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#94a3b8" }}>
+                                                        📍 {supplier.city || "India"}
                                                     </p>
-                                                )}
+                                                </div>
+                                                {/* Card Body */}
+                                                <div style={{ padding: "16px 20px" }}>
+                                                    {/* Badges */}
+                                                    {supplier.badges && supplier.badges.length > 0 && (
+                                                        <div style={{ display: "flex", gap: "6px", marginBottom: "12px", flexWrap: "wrap" }}>
+                                                            {supplier.badges.includes("verified") && (
+                                                                <span style={{ padding: "3px 10px", backgroundColor: "#dcfce7", color: "#15803d", borderRadius: "20px", fontSize: "11px", fontWeight: "500" }}>
+                                                                    ✓ Verified
+                                                                </span>
+                                                            )}
+                                                            {supplier.badges.includes("gst") && (
+                                                                <span style={{ padding: "3px 10px", backgroundColor: "#dbeafe", color: "#1d4ed8", borderRadius: "20px", fontSize: "11px", fontWeight: "500" }}>
+                                                                    GST Registered
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                    {/* Categories */}
+                                                    {supplier.productCategories && supplier.productCategories.length > 0 && (
+                                                        <div style={{ display: "flex", gap: "4px", marginBottom: "12px", flexWrap: "wrap" }}>
+                                                            {supplier.productCategories.slice(0, 3).map((cat, idx) => (
+                                                                <span key={idx} style={{
+                                                                    padding: "2px 8px",
+                                                                    backgroundColor: "#f1f5f9",
+                                                                    color: "#475569",
+                                                                    borderRadius: "6px",
+                                                                    fontSize: "11px"
+                                                                }}>
+                                                                    {cat}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {/* Phone */}
+                                                    {supplier.phone ? (
+                                                        <div style={{
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "8px",
+                                                            padding: "10px 14px",
+                                                            backgroundColor: "#f0fdf4",
+                                                            borderRadius: "10px",
+                                                            border: "1px solid #bbf7d0"
+                                                        }}>
+                                                            <span style={{ fontSize: "16px" }}>📞</span>
+                                                            <span style={{ fontSize: "14px", fontWeight: "600", color: "#15803d" }}>
+                                                                {supplier.phone}
+                                                            </span>
+                                                        </div>
+                                                    ) : (
+                                                        <p style={{ margin: 0, fontSize: "12px", color: "#94a3b8", fontStyle: "italic" }}>
+                                                            Phone not available
+                                                        </p>
+                                                    )}
+                                                </div>
                                             </div>
                                         ))}
                                     </div>
@@ -346,31 +460,60 @@ export default function BuyerDashboard() {
                                         </p>
                                     </div>
                                 ) : (
-                                    <div style={{
-                                        backgroundColor: "white",
-                                        borderRadius: "12px",
-                                        border: "1px solid #e2e8f0"
-                                    }}>
-                                        {recentActivity.map((activity, i) => (
-                                            <div key={i} style={{
-                                                padding: "16px 20px",
-                                                borderBottom: i < recentActivity.length - 1 ? "1px solid #e2e8f0" : "none",
-                                                display: "flex",
-                                                alignItems: "center",
-                                                gap: "12px"
-                                            }}>
-                                                <span style={{ fontSize: "20px" }}>📞</span>
-                                                <div>
-                                                    <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>
-                                                        Viewed contact for <strong>{activity.supplierName}</strong>
-                                                    </p>
-                                                    <p style={{ margin: "4px 0 0", fontSize: "12px", color: "#64748b" }}>
-                                                        {formatDate(activity.timestamp)}
-                                                    </p>
+                                    <>
+                                        {/* Contact count badge */}
+                                        <div style={{
+                                            display: "inline-flex",
+                                            alignItems: "center",
+                                            gap: "6px",
+                                            padding: "6px 14px",
+                                            backgroundColor: "#dbeafe",
+                                            color: "#1d4ed8",
+                                            borderRadius: "20px",
+                                            fontSize: "12px",
+                                            fontWeight: "500",
+                                            marginBottom: "16px"
+                                        }}>
+                                            👁️ {recentActivity.length} contacts viewed
+                                        </div>
+                                        <div style={{
+                                            backgroundColor: "white",
+                                            borderRadius: "12px",
+                                            border: "1px solid #e2e8f0"
+                                        }}>
+                                            {recentActivity.map((activity, i) => (
+                                                <div key={i} style={{
+                                                    padding: "16px 20px",
+                                                    borderBottom: i < recentActivity.length - 1 ? "1px solid #e2e8f0" : "none",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: "12px"
+                                                }}>
+                                                    <div style={{
+                                                        width: "40px", height: "40px",
+                                                        borderRadius: "10px",
+                                                        backgroundColor: "#f0fdf4",
+                                                        display: "flex", alignItems: "center", justifyContent: "center",
+                                                        fontSize: "18px",
+                                                        flexShrink: 0
+                                                    }}>📞</div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <p style={{ margin: 0, fontSize: "14px", color: "#0f172a" }}>
+                                                            Viewed contact for <strong>{activity.supplierName}</strong>
+                                                        </p>
+                                                        {activity.supplierPhone && (
+                                                            <p style={{ margin: "2px 0 0", fontSize: "13px", color: "#15803d", fontWeight: "500" }}>
+                                                                📱 {activity.supplierPhone}
+                                                            </p>
+                                                        )}
+                                                        <p style={{ margin: "2px 0 0", fontSize: "12px", color: "#64748b" }}>
+                                                            {formatDate(activity.timestamp)}
+                                                        </p>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    </>
                                 )}
                             </div>
                         )}
