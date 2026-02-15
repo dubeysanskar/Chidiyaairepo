@@ -8,7 +8,15 @@ export async function GET() {
             orderBy: { createdAt: "desc" },
             include: {
                 documents: true,
-                products: true
+                products: true,
+                ratings: true,
+                supplierCategories: {
+                    include: {
+                        categoryTemplate: {
+                            select: { id: true, name: true, slug: true }
+                        }
+                    }
+                }
             }
         });
         return NextResponse.json(suppliers);
@@ -126,3 +134,111 @@ export async function PUT(req: Request) {
     }
 }
 
+export async function DELETE(req: Request) {
+    try {
+        const { searchParams } = new URL(req.url);
+        const id = searchParams.get("id");
+
+        if (!id) {
+            return NextResponse.json({ error: "Supplier ID required" }, { status: 400 });
+        }
+
+        // Get supplier info before deletion for logging
+        const supplier = await prisma.supplier.findUnique({
+            where: { id },
+            select: { companyName: true, email: true }
+        });
+
+        if (!supplier) {
+            return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
+        }
+
+        // Delete related records first, then the supplier
+        await prisma.$transaction([
+            prisma.supplierDocument.deleteMany({ where: { supplierId: id } }),
+            prisma.product.deleteMany({ where: { supplierId: id } }),
+            prisma.supplierRating.deleteMany({ where: { supplierId: id } }),
+            prisma.supplierCategory.deleteMany({ where: { supplierId: id } }),
+            prisma.trialExtensionRequest.deleteMany({ where: { supplierId: id } }),
+            prisma.subscriptionPayment.deleteMany({ where: { supplierId: id } }),
+            prisma.quote.deleteMany({ where: { supplierId: id } }),
+            prisma.supplier.delete({ where: { id } }),
+        ]);
+
+        // Log the deletion
+        await prisma.activityLog.create({
+            data: {
+                action: "delete",
+                entityType: "supplier",
+                entityId: id,
+                message: `Permanently deleted supplier: ${supplier.companyName} (${supplier.email})`
+            }
+        });
+
+        return NextResponse.json({ success: true, message: `Deleted ${supplier.companyName}` });
+    } catch (error) {
+        console.error("Supplier Delete Error:", error);
+        return NextResponse.json({ error: "Failed to delete supplier" }, { status: 500 });
+    }
+}
+
+// PATCH - Map a SupplierCategory to a CategoryTemplate
+export async function PATCH(req: Request) {
+    try {
+        const { supplierCategoryId, categoryTemplateId, action: patchAction } = await req.json();
+
+        if (!supplierCategoryId) {
+            return NextResponse.json({ error: "supplierCategoryId is required" }, { status: 400 });
+        }
+
+        if (patchAction === "map" && categoryTemplateId) {
+            // Map this supplier category to an existing template
+            const updated = await prisma.supplierCategory.update({
+                where: { id: supplierCategoryId },
+                data: {
+                    categoryTemplateId: categoryTemplateId,
+                    status: "approved",
+                    approvedAt: new Date(),
+                },
+                include: {
+                    supplier: { select: { id: true, companyName: true } },
+                    categoryTemplate: { select: { id: true, name: true } }
+                }
+            });
+
+            // Log activity
+            await prisma.activityLog.create({
+                data: {
+                    action: "map_supplier_category",
+                    entityType: "supplierCategory",
+                    entityId: supplierCategoryId,
+                    message: `Mapped ${updated.supplier?.companyName}'s category "${updated.customName || 'custom'}" → template "${updated.categoryTemplate?.name}"`
+                }
+            });
+
+            // Refetch full supplier data to return updated state
+            const supplier = await prisma.supplier.findUnique({
+                where: { id: updated.supplierId },
+                include: {
+                    documents: true,
+                    products: true,
+                    ratings: true,
+                    supplierCategories: {
+                        include: {
+                            categoryTemplate: {
+                                select: { id: true, name: true, slug: true }
+                            }
+                        }
+                    }
+                }
+            });
+
+            return NextResponse.json(supplier);
+        }
+
+        return NextResponse.json({ error: "Invalid patch action" }, { status: 400 });
+    } catch (error) {
+        console.error("Supplier Category Mapping Error:", error);
+        return NextResponse.json({ error: "Failed to map category" }, { status: 500 });
+    }
+}

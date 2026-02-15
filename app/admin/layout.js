@@ -8,6 +8,7 @@ import "./admin.css";
 const navItems = [
     { id: "dashboard", label: "Dashboard", icon: "📊", href: "/admin/dashboard" },
     { id: "suppliers", label: "Suppliers", icon: "🏭", href: "/admin/suppliers" },
+    { id: "supplier-profiles", label: "Supplier Profiles", icon: "📋", href: "/admin/supplier-profiles" },
     { id: "buyers", label: "Buyers", icon: "👥", href: "/admin/buyers" },
     { id: "categories", label: "Categories", icon: "📁", href: "/admin/categories" },
     { id: "logs", label: "Audit Logs", icon: "📋", href: "/admin/logs" },

@@ -23,11 +23,13 @@ export default function SuppliersPage() {
     const [confirmDialog, setConfirmDialog] = useState({ isOpen: false, supplier: null, action: null });
     const [suspensionDialog, setSuspensionDialog] = useState({ isOpen: false, supplier: null });
     const [badgeModal, setBadgeModal] = useState({ isOpen: false, supplier: null });
-    const [productsModal, setProductsModal] = useState({ isOpen: false, supplier: null, products: [] });
+    const [detailsModal, setDetailsModal] = useState({ isOpen: false, supplier: null });
     const [docsModal, setDocsModal] = useState({ isOpen: false, supplier: null });
+    const [categoryTemplates, setCategoryTemplates] = useState([]);
 
     useEffect(() => {
         fetchSuppliers();
+        fetchCategoryTemplates();
     }, []);
 
     const fetchSuppliers = async () => {
@@ -42,7 +44,45 @@ export default function SuppliersPage() {
         }
     };
 
-    const filteredSuppliers = suppliers.filter(s => s.status === activeTab);
+    const fetchCategoryTemplates = async () => {
+        try {
+            const res = await fetch("/api/categories/templates");
+            if (res.ok) {
+                const data = await res.json();
+                setCategoryTemplates(data.categories || []);
+            }
+        } catch (error) {
+            console.error("Failed to fetch category templates", error);
+        }
+    };
+
+    const handleCategoryMapping = async (supplierCategoryId, templateId, supplierId) => {
+        try {
+            const res = await fetch("/api/admin/suppliers", {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    supplierCategoryId,
+                    categoryTemplateId: templateId,
+                    action: "map",
+                }),
+            });
+            if (res.ok) {
+                const updatedSupplier = await res.json();
+                setSuppliers(prev => prev.map(s => s.id === updatedSupplier.id ? updatedSupplier : s));
+                setDetailsModal(prev => ({ ...prev, supplier: updatedSupplier }));
+            }
+        } catch (error) {
+            console.error("Category mapping failed", error);
+        }
+    };
+
+    const filteredSuppliers = suppliers.filter(s => {
+        if (activeTab === "pending") {
+            return s.status === "pending" || s.status === "pending_admin_review";
+        }
+        return s.status === activeTab;
+    });
 
     const openConfirmDialog = (supplier, action) => {
         setConfirmDialog({ isOpen: true, supplier, action });
@@ -298,8 +338,8 @@ export default function SuppliersPage() {
                                 <button onClick={() => setDocsModal({ isOpen: true, supplier })} className="sup-btn sup-btn-view">
                                     📄 Docs
                                 </button>
-                                <button onClick={() => setProductsModal({ isOpen: true, supplier, products: supplier.products || [] })} className="sup-btn sup-btn-view">
-                                    📦 Products
+                                <button onClick={() => setDetailsModal({ isOpen: true, supplier })} className="sup-btn sup-btn-view">
+                                    📋 Details
                                 </button>
                             </div>
                         </div>
@@ -456,12 +496,13 @@ export default function SuppliersPage() {
                 />
             )}
 
-            {/* Products Modal */}
-            {productsModal.isOpen && (
-                <ProductsModal
-                    supplier={productsModal.supplier}
-                    products={productsModal.products}
-                    onClose={() => setProductsModal({ isOpen: false, supplier: null, products: [] })}
+            {/* Details Modal */}
+            {detailsModal.isOpen && (
+                <DetailsModal
+                    supplier={detailsModal.supplier}
+                    categoryTemplates={categoryTemplates}
+                    onMapCategory={handleCategoryMapping}
+                    onClose={() => setDetailsModal({ isOpen: false, supplier: null })}
                 />
             )}
 
@@ -530,40 +571,159 @@ function BadgeModal({ supplier, onClose, onSave }) {
     );
 }
 
-// Products Modal
-function ProductsModal({ supplier, products, onClose }) {
+// Details Modal with Category Management
+function DetailsModal({ supplier, categoryTemplates, onMapCategory, onClose }) {
+    const products = supplier.products || [];
+    const categories = supplier.supplierCategories || [];
+    const detailItems = [
+        { label: "Company Name", value: supplier.companyName },
+        { label: "Email", value: supplier.email },
+        { label: "Phone", value: supplier.phone },
+        { label: "Status", value: supplier.status },
+        { label: "GST Number", value: supplier.gstNumber, highlight: true },
+        { label: "PAN Number", value: supplier.panNumber, highlight: true },
+        { label: "City", value: supplier.city },
+        { label: "State", value: supplier.state },
+        { label: "Address", value: supplier.address },
+        { label: "Pincode", value: supplier.pincode },
+        { label: "Website", value: supplier.website },
+        { label: "Capacity", value: supplier.capacity },
+        { label: "MOQ", value: supplier.moq },
+        { label: "Service Locations", value: supplier.serviceLocations },
+        { label: "Established Year", value: supplier.establishedYear },
+        { label: "Employee Count", value: supplier.employeeCount },
+        { label: "Certifications", value: supplier.certifications },
+    ];
+
     return (
         <div style={{
             position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
             backgroundColor: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999, padding: "20px"
         }}>
-            <div style={{ backgroundColor: "#1e293b", borderRadius: "16px", border: "1px solid #334155", maxWidth: "600px", width: "100%", padding: "24px", maxHeight: "80vh", overflow: "auto" }}>
-                <h3 style={{ color: "white", fontSize: "20px", marginBottom: "8px" }}>📦 Products & Categories</h3>
+            <div style={{ backgroundColor: "#1e293b", borderRadius: "16px", border: "1px solid #334155", maxWidth: "700px", width: "100%", padding: "24px", maxHeight: "85vh", overflow: "auto" }}>
+                <h3 style={{ color: "white", fontSize: "20px", marginBottom: "8px" }}>Supplier Details</h3>
                 <p style={{ color: "#64748b", fontSize: "14px", marginBottom: "20px" }}>{supplier.companyName}</p>
 
-                {products.length === 0 ? (
-                    <div style={{ padding: "40px", textAlign: "center", color: "#64748b" }}>
-                        <div style={{ fontSize: "48px", marginBottom: "12px" }}>📭</div>
-                        No products listed yet
-                    </div>
-                ) : (
-                    <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
-                        {products.map((product, i) => (
-                            <div key={i} style={{ padding: "16px", backgroundColor: "#0f172a", borderRadius: "8px", border: "1px solid #334155" }}>
-                                <div style={{ color: "white", fontWeight: "500", marginBottom: "4px" }}>{product.name}</div>
-                                {product.category && <div style={{ color: "#3b82f6", fontSize: "12px", marginBottom: "4px" }}>{product.category}</div>}
-                                {product.description && <div style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "8px" }}>{product.description}</div>}
-                                <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#64748b" }}>
-                                    {product.priceRange && <span>💰 {product.priceRange}</span>}
-                                    {product.moq && <span>📦 MOQ: {product.moq}</span>}
-                                    {product.leadTime && <span>⏱️ {product.leadTime}</span>}
-                                </div>
+                {/* KYC Status */}
+                <div style={{ marginBottom: "20px", padding: "16px", background: "linear-gradient(135deg, #1a2744, #0f172a)", borderRadius: "12px", border: "1px solid #334155" }}>
+                    <div style={{ fontSize: "13px", color: "#3b82f6", fontWeight: "600", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>KYC Verification</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                        <div style={{ padding: "10px", background: "#0f172a", borderRadius: "8px", border: `1px solid ${supplier.gstNumber ? "#22c55e30" : "#ef444430"}` }}>
+                            <div style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>GST</div>
+                            <div style={{ color: supplier.gstNumber ? "#22c55e" : "#ef4444", fontWeight: "600", fontSize: "13px" }}>
+                                {supplier.gstNumber || "Not Provided"}
                             </div>
-                        ))}
+                        </div>
+                        <div style={{ padding: "10px", background: "#0f172a", borderRadius: "8px", border: `1px solid ${supplier.panNumber ? "#22c55e30" : "#ef444430"}` }}>
+                            <div style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>PAN</div>
+                            <div style={{ color: supplier.panNumber ? "#22c55e" : "#ef4444", fontWeight: "600", fontSize: "13px" }}>
+                                {supplier.panNumber || "Not Provided"}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Category Section */}
+                <div style={{ marginBottom: "20px", padding: "16px", background: "linear-gradient(135deg, #1a2744, #0f172a)", borderRadius: "12px", border: "1px solid #334155" }}>
+                    <div style={{ fontSize: "13px", color: "#3b82f6", fontWeight: "600", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Categories</div>
+                    {categories.length === 0 && (!supplier.productCategories || supplier.productCategories.length === 0) ? (
+                        <div style={{ color: "#64748b", fontSize: "13px", padding: "10px", textAlign: "center" }}>No categories assigned</div>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                            {categories.map((cat, i) => {
+                                const isMapped = !!cat.categoryTemplateId;
+                                const categoryName = isMapped ? cat.categoryTemplate?.name : (cat.customName || "Custom Category");
+                                return (
+                                    <div key={i} style={{ padding: "14px", background: "#0f172a", borderRadius: "10px", border: `1px solid ${isMapped ? "#22c55e30" : "#f59e0b30"}` }}>
+                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "8px", flexWrap: "wrap", gap: "6px" }}>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                                <span style={{ fontSize: "15px", color: "white", fontWeight: "600" }}>{categoryName}</span>
+                                                {cat.isPrimary && <span style={{ padding: "2px 8px", background: "#3b82f620", color: "#3b82f6", fontSize: "10px", borderRadius: "8px", fontWeight: "600" }}>PRIMARY</span>}
+                                            </div>
+                                            <span style={{ padding: "4px 10px", borderRadius: "8px", fontSize: "11px", fontWeight: "600", background: isMapped ? "#22c55e20" : "#f59e0b20", color: isMapped ? "#22c55e" : "#f59e0b" }}>
+                                                {isMapped ? "Mapped" : "Unmapped"}
+                                            </span>
+                                        </div>
+                                        {isMapped && <div style={{ fontSize: "12px", color: "#94a3b8", marginBottom: "4px" }}>Linked to template: <span style={{ color: "#22c55e", fontWeight: "500" }}>{cat.categoryTemplate?.name}</span></div>}
+                                        {cat.customDescription && (
+                                            <div style={{ fontSize: "12px", color: "#94a3b8", marginTop: "6px", padding: "8px 10px", background: "#1e293b", borderRadius: "6px", lineHeight: "1.5" }}>
+                                                <strong style={{ color: "#64748b" }}>Description:</strong> {cat.customDescription}
+                                            </div>
+                                        )}
+                                        {!isMapped && (
+                                            <div style={{ marginTop: "10px", padding: "10px", background: "#1e293b", borderRadius: "8px", border: "1px dashed #f59e0b40" }}>
+                                                <div style={{ fontSize: "11px", color: "#f59e0b", fontWeight: "600", marginBottom: "8px", textTransform: "uppercase" }}>Map to existing template:</div>
+                                                <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", alignItems: "center" }}>
+                                                    <select id={`map-select-${cat.id}`} style={{ flex: 1, minWidth: "180px", padding: "8px 12px", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", color: "white", fontSize: "13px", outline: "none" }} defaultValue="">
+                                                        <option value="" disabled>Select a template...</option>
+                                                        {(categoryTemplates || []).map(t => (<option key={t.id} value={t.id}>{t.name}</option>))}
+                                                    </select>
+                                                    <button onClick={() => { const sel = document.getElementById(`map-select-${cat.id}`); if (sel && sel.value) onMapCategory(cat.id, sel.value, supplier.id); }} style={{ padding: "8px 16px", background: "#22c55e", color: "white", border: "none", borderRadius: "8px", cursor: "pointer", fontSize: "12px", fontWeight: "600", whiteSpace: "nowrap" }}>Map</button>
+                                                </div>
+                                                <div style={{ marginTop: "8px", textAlign: "center" }}>
+                                                    <span style={{ color: "#64748b", fontSize: "11px" }}>or </span>
+                                                    <a href="/admin/categories" target="_blank" rel="noopener noreferrer" style={{ color: "#3b82f6", fontSize: "12px", fontWeight: "500", textDecoration: "none" }}>+ Create New Template</a>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                            {supplier.productCategories && supplier.productCategories.length > 0 && categories.length === 0 && (
+                                <div>
+                                    <div style={{ fontSize: "11px", color: "#64748b", marginBottom: "6px" }}>Legacy categories (from registration form):</div>
+                                    <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
+                                        {supplier.productCategories.map((cat, i) => (<span key={i} style={{ padding: "5px 12px", background: "#334155", borderRadius: "12px", fontSize: "12px", color: "#94a3b8" }}>{cat}</span>))}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+                </div>
+
+                {/* Category Description */}
+                {supplier.description && (
+                    <div style={{ marginBottom: "20px", padding: "14px 16px", background: "#0f172a", borderRadius: "10px", border: "1px solid #334155" }}>
+                        <div style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", marginBottom: "6px", letterSpacing: "0.5px" }}>Category / Business Description</div>
+                        <div style={{ color: "#e2e8f0", fontSize: "13px", lineHeight: "1.6" }}>{supplier.description}</div>
                     </div>
                 )}
 
-                <button onClick={onClose} style={{ marginTop: "20px", width: "100%", padding: "12px", backgroundColor: "#334155", color: "#94a3b8", border: "none", borderRadius: "8px", cursor: "pointer" }}>Close</button>
+                {/* All Details Grid */}
+                <div style={{ marginBottom: "20px" }}>
+                    <div style={{ fontSize: "13px", color: "#3b82f6", fontWeight: "600", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>All Details</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: "10px" }}>
+                        {detailItems.filter(item => item.value).map((item, i) => (
+                            <div key={i} style={{ padding: "10px 12px", background: "#0f172a", borderRadius: "8px", border: item.highlight ? "1px solid #22c55e30" : "1px solid #334155" }}>
+                                <div style={{ fontSize: "10px", color: "#64748b", textTransform: "uppercase", marginBottom: "4px" }}>{item.label}</div>
+                                <div style={{ color: item.highlight ? "#22c55e" : "white", fontSize: "13px", wordBreak: "break-all" }}>{item.value}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Products */}
+                {products.length > 0 && (
+                    <div style={{ marginBottom: "20px" }}>
+                        <div style={{ fontSize: "13px", color: "#3b82f6", fontWeight: "600", marginBottom: "12px", textTransform: "uppercase", letterSpacing: "0.5px" }}>Products ({products.length})</div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+                            {products.map((product, i) => (
+                                <div key={i} style={{ padding: "14px", background: "#0f172a", borderRadius: "10px", border: "1px solid #334155" }}>
+                                    <div style={{ color: "white", fontWeight: "500", marginBottom: "4px" }}>{product.name}</div>
+                                    {product.category && <div style={{ color: "#3b82f6", fontSize: "12px", marginBottom: "4px" }}>{product.category}</div>}
+                                    {product.description && <div style={{ color: "#94a3b8", fontSize: "13px", marginBottom: "8px" }}>{product.description}</div>}
+                                    <div style={{ display: "flex", gap: "16px", fontSize: "12px", color: "#64748b" }}>
+                                        {product.priceRange && <span>Price: {product.priceRange}</span>}
+                                        {product.moq && <span>MOQ: {product.moq}</span>}
+                                        {product.leadTime && <span>Lead: {product.leadTime}</span>}
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                <button onClick={onClose} style={{ marginTop: "4px", width: "100%", padding: "12px", backgroundColor: "#334155", color: "#94a3b8", border: "none", borderRadius: "8px", cursor: "pointer" }}>Close</button>
             </div>
         </div>
     );

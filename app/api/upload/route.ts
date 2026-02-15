@@ -21,19 +21,19 @@ export async function POST(request: NextRequest) {
         }
 
         // Validate file type
-        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
         if (!allowedTypes.includes(file.type)) {
             return NextResponse.json(
-                { error: "Invalid file type. Only JPG, PNG, WebP, and GIF are allowed." },
+                { error: "Invalid file type. Only JPG, PNG, WebP, GIF, and PDF are allowed." },
                 { status: 400 }
             );
         }
 
-        // Validate file size (max 5MB)
-        const maxSize = 5 * 1024 * 1024; // 5MB
+        // Validate file size (max 15MB)
+        const maxSize = 15 * 1024 * 1024; // 15MB
         if (file.size > maxSize) {
             return NextResponse.json(
-                { error: "File too large. Maximum size is 5MB." },
+                { error: "File too large. Maximum size is 15MB." },
                 { status: 400 }
             );
         }
@@ -95,8 +95,8 @@ export async function PUT(request: NextRequest) {
             await mkdir(typeDir, { recursive: true });
         }
 
-        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-        const maxSize = 5 * 1024 * 1024;
+        const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+        const maxSize = 15 * 1024 * 1024;
         const uploadedFiles = [];
         const errors = [];
 

@@ -105,9 +105,25 @@ export async function POST(req: Request) {
                             isPrimary: true,
                         }
                     });
-                    console.log("SupplierCategory created");
+                    console.log("SupplierCategory created (mapped to template)");
                 } catch (catError) {
                     console.error("Error creating supplier category:", catError);
+                }
+            } else if (Array.isArray(productCategories) && productCategories.length > 0) {
+                // "Other" category — create SupplierCategory with customName for admin to map
+                try {
+                    await prisma.supplierCategory.create({
+                        data: {
+                            supplierId: supplier.id,
+                            customName: productCategories[0],
+                            customDescription: categoryDescription || "",
+                            status: "pending",
+                            isPrimary: true,
+                        }
+                    });
+                    console.log("SupplierCategory created (custom/unmapped)");
+                } catch (catError) {
+                    console.error("Error creating custom supplier category:", catError);
                 }
             }
 

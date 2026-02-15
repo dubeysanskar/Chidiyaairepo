@@ -86,7 +86,7 @@ export default function SupplierPending() {
 
             {/* Main Content */}
             <main style={{ maxWidth: "600px", margin: "0 auto", padding: "80px 24px", textAlign: "center" }}>
-                {status === "pending" && (
+                {(status === "pending" || status === "pending_admin_review") && (
                     <>
                         <div style={{
                             width: "100px",

@@ -127,7 +127,7 @@ export default function SupplierLanding() {
                         fontWeight: "600",
                         marginBottom: "32px"
                     }}>
-                        🎉 Free for 6 months, then ₹2,999/month
+                        🎉 Free for 3 months, then subscribe for Pro plan
                     </div>
                     <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexDirection: isMobile ? "column" : "row" }}>
                         <Link href="/supplier/register" style={{
