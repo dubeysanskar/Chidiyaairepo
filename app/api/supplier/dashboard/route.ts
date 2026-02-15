@@ -42,7 +42,7 @@ export async function GET(req: Request) {
             return NextResponse.json({ error: "Supplier not found" }, { status: 404 });
         }
 
-        // Check if supplier is approved
+        // Block dashboard access for non-approved suppliers — redirect to pending page
         if (supplier.status !== "approved") {
             return NextResponse.json({
                 error: "Account not approved",

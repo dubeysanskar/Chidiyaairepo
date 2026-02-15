@@ -10,7 +10,9 @@ function getResend(): Resend | null {
     return resend;
 }
 
-const FROM_EMAIL = process.env.EMAIL_FROM || 'ChidiyaAI <noreply@chidiyaai.com>';
+// Use resend.dev test domain until chidiyaai.com is verified on Resend
+// Once verified, change back to: 'ChidiyaAI <noreply@chidiyaai.com>'
+const FROM_EMAIL = process.env.EMAIL_FROM || 'ChidiyaAI <onboarding@resend.dev>';
 const BASE_URL = process.env.NEXTAUTH_URL || 'https://chidiyaai.com';
 
 // ============================================
@@ -80,18 +82,19 @@ export async function sendSupplierWelcomeEmail(email: string, companyName: strin
                         <h1 style="color: white; margin: 0; font-size: 28px;">Welcome, ${companyName}! 🚀</h1>
                     </div>
                     <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
-                        <p style="font-size: 16px; color: #334155;">Congratulations on joining ChidiyaAI!</p>
-                        <p style="font-size: 16px; color: #334155;">Your account is under review. Once approved, you'll be able to:</p>
+                        <p style="font-size: 16px; color: #334155;">Thank you for registering on ChidiyaAI Seller Platform!</p>
+                        <p style="font-size: 16px; color: #334155;">Your application has been submitted and is now pending admin review. Once approved, you'll be able to:</p>
                         <ul style="color: #334155;">
                             <li>📦 List your packaging products</li>
+                            <li>📊 View analytics & performance data</li>
                             <li>🔔 Receive buyer inquiries directly</li>
                             <li>⭐ Build your reputation with badges</li>
                             <li>📈 Grow your business with AI-matched leads</li>
                         </ul>
                         <div style="background: #fef3c7; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <p style="color: #92400e; margin: 0; font-size: 14px;">⏳ <strong>Review Status:</strong> Your account is pending approval. We'll notify you once approved!</p>
+                            <p style="color: #92400e; margin: 0; font-size: 14px;">⏳ <strong>Review Status:</strong> Your documents are being reviewed by our admin team. You'll receive an email once approved (typically 24-48 hours).</p>
                         </div>
-                        <p style="font-size: 14px; color: #64748b;">Free for 6 months, then ₹2999/year for unlimited access.</p>
+                        <p style="font-size: 14px; color: #64748b;">If you have any questions, reach out to us at support@chidiyaai.com</p>
                     </div>
                 </div>
             `
@@ -104,6 +107,111 @@ export async function sendSupplierWelcomeEmail(email: string, companyName: strin
         return { success: true, data };
     } catch (error) {
         console.error('Error sending supplier welcome email:', error);
+        return { success: false, error };
+    }
+}
+
+// ============================================
+// ADMIN: NEW SUPPLIER NOTIFICATION
+// ============================================
+
+const ADMIN_EMAILS = ['annglobal08@gmail.com', 'sanskardubeyxo@gmail.com'];
+
+export async function sendAdminNewSupplierNotification(companyName: string, supplierEmail: string, phone: string) {
+    try {
+        const client = getResend();
+        if (!client) {
+            console.warn('Resend API key not configured, skipping admin notification');
+            return { success: false, error: 'Email not configured' };
+        }
+
+        const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+        const { data, error } = await client.emails.send({
+            from: FROM_EMAIL,
+            to: ADMIN_EMAILS,
+            subject: `🆕 New Supplier Registration: ${companyName}`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px;">
+                    <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">🆕 New Supplier Approval Request</h1>
+                    </div>
+                    <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
+                        <p style="font-size: 16px; color: #334155;">A new supplier has registered and is waiting for approval:</p>
+                        <div style="background: #f1f5f9; padding: 20px; border-radius: 12px; margin: 20px 0;">
+                            <p style="margin: 8px 0; color: #334155;"><strong>Company:</strong> ${companyName}</p>
+                            <p style="margin: 8px 0; color: #334155;"><strong>Email:</strong> ${supplierEmail}</p>
+                            <p style="margin: 8px 0; color: #334155;"><strong>Phone:</strong> ${phone}</p>
+                        </div>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${BASE_URL}/admin" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); color: white; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">Go to Admin Portal →</a>
+                        </div>
+                        <p style="font-size: 13px; color: #94a3b8; text-align: center;">Please review their documents and approve/reject from the admin panel.</p>
+                    </div>
+                </div>
+            `
+        });
+
+        if (error) {
+            console.error('Failed to send admin notification:', error);
+            return { success: false, error };
+        }
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error sending admin notification:', error);
+        return { success: false, error };
+    }
+}
+
+// ============================================
+// SUPPLIER: APPROVAL CONFIRMATION
+// ============================================
+
+export async function sendSupplierApprovedEmail(email: string, companyName: string) {
+    try {
+        const client = getResend();
+        if (!client) {
+            console.warn('Resend API key not configured, skipping email');
+            return { success: false, error: 'Email not configured' };
+        }
+
+        const BASE_URL = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000';
+
+        const { data, error } = await client.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: '✅ Your ChidiyaAI Seller Account is Approved!',
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px;">
+                    <div style="background: linear-gradient(135deg, #10b981, #059669); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 28px;">🎉 Account Approved!</h1>
+                    </div>
+                    <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
+                        <p style="font-size: 16px; color: #334155;">Great news, <strong>${companyName}</strong>!</p>
+                        <p style="font-size: 16px; color: #334155;">Your seller account has been approved by our admin team. You now have full access to all features:</p>
+                        <ul style="color: #334155;">
+                            <li>📦 List your packaging products</li>
+                            <li>📊 View analytics & performance data</li>
+                            <li>🔔 Receive buyer inquiries directly</li>
+                            <li>⭐ Build your reputation with badges</li>
+                            <li>📈 Grow your business with AI-matched leads</li>
+                        </ul>
+                        <div style="text-align: center; margin: 30px 0;">
+                            <a href="${BASE_URL}/supplier/login" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">Login to Dashboard →</a>
+                        </div>
+                        <p style="font-size: 14px; color: #64748b;">Welcome aboard! We're excited to have you as a seller on ChidiyaAI.</p>
+                    </div>
+                </div>
+            `
+        });
+
+        if (error) {
+            console.error('Failed to send approval email:', error);
+            return { success: false, error };
+        }
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error sending approval email:', error);
         return { success: false, error };
     }
 }
@@ -407,6 +515,64 @@ export async function sendSupplierCardEmail(
         return { success: true, data };
     } catch (error) {
         console.error('Error sending supplier card email:', error);
+        return { success: false, error };
+    }
+}
+
+// ============================================
+// CATEGORY APPROVAL EMAIL
+// ============================================
+
+export async function sendCategoryApprovalEmail(
+    email: string,
+    companyName: string,
+    categoryName: string,
+    action: 'approved' | 'rejected' = 'approved'
+) {
+    const isApproved = action === 'approved';
+    try {
+        const client = getResend();
+        if (!client) {
+            console.warn('Resend API key not configured, skipping email');
+            return { success: false, error: 'Email not configured' };
+        }
+        const { data, error } = await client.emails.send({
+            from: FROM_EMAIL,
+            to: email,
+            subject: isApproved
+                ? `✅ Category "${categoryName}" Approved — ChidiyaAI`
+                : `❌ Category "${categoryName}" Not Approved — ChidiyaAI`,
+            html: `
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px;">
+                    <div style="background: ${isApproved ? '#10b981' : '#ef4444'}; padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                        <h1 style="color: white; margin: 0; font-size: 24px;">${isApproved ? '✅ Category Approved!' : '❌ Category Not Approved'}</h1>
+                    </div>
+                    <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
+                        <p style="font-size: 16px; color: #334155;">Hi ${companyName},</p>
+                        <p style="font-size: 16px; color: #334155;">
+                            ${isApproved
+                    ? `Great news! Your request for the category <strong>"${categoryName}"</strong> has been approved. You can now list products under this category.`
+                    : `Unfortunately, your request for the category <strong>"${categoryName}"</strong> was not approved. Please contact support if you have questions.`
+                }
+                        </p>
+                        ${isApproved ? `
+                            <div style="text-align: center; margin: 30px 0;">
+                                <a href="${BASE_URL}/supplier/dashboard" style="background: #10b981; color: white; padding: 14px 30px; border-radius: 8px; text-decoration: none; font-weight: bold;">Go to Dashboard</a>
+                            </div>
+                        ` : ''}
+                        <p style="font-size: 14px; color: #64748b;">Need help? Contact us at support@chidiyaai.com</p>
+                    </div>
+                </div>
+            `
+        });
+
+        if (error) {
+            console.error('Failed to send category approval email:', error);
+            return { success: false, error };
+        }
+        return { success: true, data };
+    } catch (error) {
+        console.error('Error sending category approval email:', error);
         return { success: false, error };
     }
 }

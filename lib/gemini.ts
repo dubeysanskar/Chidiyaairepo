@@ -72,13 +72,10 @@ export function matchCategory(
     categories: CategoryContext[]
 ): CategoryContext | null {
     const lowerMessage = message.toLowerCase();
-    // Generic words that are too ambiguous to match alone
-    const stopWords = ['and', 'the', 'for', 'raw', 'fabric', 'fabrics', 'materials',
-        'paper', 'plastic', 'tape', 'tapes', 'bag', 'bags', 'box', 'boxes',
-        'sheet', 'sheets', 'roll', 'rolls', 'wrap', 'wraps', 'cup', 'cups',
-        'poly', 'polythene', 'polyethene', 'packing', 'pack', 'packaging',
-        'cover', 'covers', 'film', 'films', 'label', 'labels', 'print',
-        'pouch', 'pouches', 'bottle', 'bottles', 'container', 'containers'];
+    // Only truly generic/ambiguous words that can't identify a product alone
+    const stopWords = ['and', 'the', 'for', 'raw', 'materials', 'material',
+        'packing', 'pack', 'supply', 'supplies', 'product', 'products',
+        'item', 'items', 'type', 'types', 'kind', 'size', 'small', 'large', 'big'];
 
     // PASS 1: Exact full name match (highest priority)
     for (const category of categories) {
@@ -166,9 +163,9 @@ CRITICAL RULES:
 - NEVER repeat what they just told you back to them
 - If user says "no" or "show me results" - stop asking questions!
 - NEVER assume what product the user wants - ask them first!
-- If user just says "hi" or "hey" - greet them and ask what they're looking for
-- Examples in welcome message (Paper Cups, Boxes) are just EXAMPLES - don't assume user wants them!
+- If user just says "hi" or "hey" - greet them and ask what product they need. Do NOT suggest any specific products.
 - If user types gibberish or unclear text - ask them to clarify what product they need
+- Do NOT mention or suggest specific products (like Paper Cups or Boxes) unless the user has asked for them
 
 `;
 
@@ -350,43 +347,30 @@ export function shouldFetchSuppliers(
     providedSpecs?: { key: string; value: string }[],
     missingImportantSpecs?: CategorySpec[]
 ): boolean {
-    const lowerMessage = lastMessage.toLowerCase();
+    const lowerMessage = lastMessage.toLowerCase().trim();
 
     // Greetings should never trigger supplier fetch
     const greetings = ['hi', 'hello', 'hey', 'good morning', 'good evening', 'thanks', 'thank you', 'bye'];
-    const isJustGreeting = greetings.some(g => lowerMessage.trim() === g || lowerMessage.trim() === g + '!');
+    const isJustGreeting = greetings.some(g => lowerMessage === g || lowerMessage === g + '!');
     if (isJustGreeting) return false;
 
-    // Product keywords that indicate user wants to find suppliers
-    const productKeywords = [
-        "cup", "box", "tape", "bag", "wrap", "packaging", "poly", "corrugated", "bopp",
-        "need", "want", "looking", "find", "search", "get", "show", "require", "order",
-        "supplier", "buy", "purchase", "bulk", "wholesale", "manufacturer", "vendor",
-        "textile", "fabric", "cotton", "paper", "plastic", "thermocol", "bubble",
-        "shipping", "carton", "pouch", "label", "sticker", "print"
-    ];
-
-    // Check if message contains product keywords
-    const hasProductKeyword = productKeywords.some(keyword => lowerMessage.includes(keyword));
-
-    // User explicitly wants results
+    // User explicitly wants results → show immediately
     const wantsResults = /show\s+(me\s+)?results?/i.test(lowerMessage) ||
         /show\s+(me\s+)?supplier/i.test(lowerMessage) ||
-        /yes/i.test(lowerMessage.trim()) ||
+        /^yes$/i.test(lowerMessage) ||
         /no\s+preference/i.test(lowerMessage);
-
-    // Always fetch if user mentions a product or quantity  
-    const hasQuantity = /\d+/.test(lastMessage);
-
-    // If we have provided specs, fetch suppliers
-    const hasSpecs = providedSpecs && providedSpecs.length >= 1;
-
-    // Show suppliers only after enough conversation (at least 2 full exchanges = 4 messages)
-    // 1. User explicitly wants results → show immediately
-    // 2. User has product keyword AND specs/quantity → show after 3+ messages
-    // 3. After 4+ messages (they've been chatting enough, show something)
     if (wantsResults) return true;
-    if (hasProductKeyword && (hasSpecs || hasQuantity) && messageCount >= 3) return true;
-    if (messageCount >= 4) return true;
+
+    // If user has provided specs, show after 2+ messages
+    const hasSpecs = providedSpecs && providedSpecs.length >= 1;
+    if (hasSpecs && messageCount >= 2) return true;
+
+    // After 3+ messages AND user has been providing details (not just chatting)
+    const hasQuantity = /\d+/.test(lastMessage);
+    if (hasQuantity && messageCount >= 3) return true;
+
+    // After 5+ messages, show what we have (they've been chatting enough)
+    if (messageCount >= 5) return true;
+
     return false;
 }

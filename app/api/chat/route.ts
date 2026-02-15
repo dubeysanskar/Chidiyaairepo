@@ -26,52 +26,57 @@ interface SupplierResult {
     phone?: string;
     description?: string;
     matchScore: number;
-    rating: number;
+    rating: number | null;
     price: string;
     priceUnit: string;
 }
 
-// Calculate match score based on requirements
+// Calculate match score based on requirements — STRICT category-first scoring
 function calculateMatchScore(supplier: {
     city?: string | null;
     productCategories: string[];
     badges: string[];
+    hasProducts?: boolean;
+    hasRealPrice?: boolean;
 }, requirements: UserRequirements | undefined, matchedCategory?: CategoryContext): number {
     const categoryName = matchedCategory?.name || requirements?.category || "";
 
-    // Check if supplier matches the requested category
-    const hasCategory = categoryName ? supplier.productCategories?.some(cat => {
-        const catLower = cat.toLowerCase();
-        const reqLower = categoryName.toLowerCase();
-        // Check for partial matches in both directions
-        return catLower.includes(reqLower) ||
-            reqLower.includes(catLower) ||
-            // Also check common keywords
-            reqLower.split(' ').some(word => word.length > 3 && catLower.includes(word));
-    }) : true;
+    // STRICT: If category is specified, supplier MUST have it
+    if (!categoryName) return 0; // No category = no results
 
-    // If category doesn't match at all, return 0 - don't show irrelevant suppliers
-    if (categoryName && !hasCategory) {
-        return 0;
-    }
+    const hasExactCategory = supplier.productCategories?.some(cat => {
+        const catLower = cat.toLowerCase().trim();
+        const reqLower = categoryName.toLowerCase().trim();
+        return catLower === reqLower || catLower.includes(reqLower) || reqLower.includes(catLower);
+    });
 
-    let score = 60; // Base score for approved suppliers with matching category
+    if (!hasExactCategory) return 0; // No category match = 0, never show
 
-    // Location match - important (+25)
+    let score = 40; // Base: has matching category (40%)
+
+    // Location match (+25)
     if (requirements?.location && supplier.city) {
-        const locationMatch = supplier.city.toLowerCase().includes(requirements.location.toLowerCase()) ||
-            requirements.location.toLowerCase().includes(supplier.city.toLowerCase());
-        if (locationMatch) score += 25;
+        const supplierCity = supplier.city.toLowerCase().trim();
+        const reqLocation = requirements.location.toLowerCase().trim();
+        if (supplierCity.includes(reqLocation) || reqLocation.includes(supplierCity)) {
+            score += 25;
+        }
     }
 
-    // Badges bonus (up to +15)
+    // Has real products listed (+15)
+    if (supplier.hasProducts) score += 15;
+
+    // Has real pricing (+10)
+    if (supplier.hasRealPrice) score += 10;
+
+    // Badges bonus (up to +10)
     if (supplier.badges) {
-        if (supplier.badges.includes("verified")) score += 5;
-        if (supplier.badges.includes("gst")) score += 5;
-        if (supplier.badges.includes("premium")) score += 5;
+        if (supplier.badges.includes("verified")) score += 4;
+        if (supplier.badges.includes("gst")) score += 3;
+        if (supplier.badges.includes("premium")) score += 3;
     }
 
-    return Math.min(score, 100);
+    return Math.min(score, 95); // Cap at 95 — 100 is reserved for perfect verified matches
 }
 
 // Detect if user is asking for a specific product/category
@@ -243,94 +248,63 @@ export async function POST(request: NextRequest) {
                     };
                 }
 
-                // Fetch suppliers with their products
-                const [exactMatchPromise, broadMatchPromise] = [
-                    prisma.supplier.findMany({
-                        where: whereClause,
-                        take: 10,
-                        orderBy: { createdAt: "desc" },
-                        select: {
-                            id: true,
-                            companyName: true,
-                            city: true,
-                            state: true,
-                            productCategories: true,
-                            moq: true,
-                            badges: true,
-                            phone: true,
-                            description: true,
-                            products: {
-                                where: { isActive: true },
-                                take: 5,
-                                select: {
-                                    price: true,
-                                    priceUnit: true,
-                                    moq: true,
-                                },
+                // Fetch suppliers — ONLY exact category matches, NO broad fallback
+                const dbSuppliers = await prisma.supplier.findMany({
+                    where: whereClause,
+                    take: 10,
+                    orderBy: { createdAt: "desc" },
+                    select: {
+                        id: true,
+                        companyName: true,
+                        city: true,
+                        state: true,
+                        productCategories: true,
+                        moq: true,
+                        badges: true,
+                        phone: true,
+                        description: true,
+                        products: {
+                            where: { isActive: true },
+                            take: 5,
+                            select: {
+                                price: true,
+                                priceUnit: true,
+                                moq: true,
                             },
                         },
-                    }),
-                    prisma.supplier.findMany({
-                        where: { status: "approved" },
-                        take: 10,
-                        select: {
-                            id: true,
-                            companyName: true,
-                            city: true,
-                            state: true,
-                            productCategories: true,
-                            moq: true,
-                            badges: true,
-                            phone: true,
-                            description: true,
-                            products: {
-                                where: { isActive: true },
-                                take: 5,
-                                select: {
-                                    price: true,
-                                    priceUnit: true,
-                                    moq: true,
-                                },
-                            },
-                        },
-                    }),
-                ];
+                    },
+                });
 
-                const dbSuppliers = await exactMatchPromise;
-
-                // FIXED: Only use broad match if NO category was specified
-                // When user asks for a specific category, only show suppliers that match
-                let rawSuppliers;
-                if (categoryName) {
-                    // Category specified - only use exact matches, filter strictly
-                    rawSuppliers = dbSuppliers.filter(s => {
-                        const catLower = categoryName.toLowerCase();
+                // Strict filtering: only suppliers whose categories actually match
+                const rawSuppliers = categoryName
+                    ? dbSuppliers.filter(s => {
+                        const catLower = categoryName.toLowerCase().trim();
                         return s.productCategories?.some(pc => {
-                            const pcLower = pc.toLowerCase();
-                            return pcLower.includes(catLower) ||
-                                catLower.includes(pcLower) ||
-                                catLower.split(' ').some(word => word.length > 3 && pcLower.includes(word));
+                            const pcLower = pc.toLowerCase().trim();
+                            return pcLower === catLower || pcLower.includes(catLower) || catLower.includes(pcLower);
                         });
-                    });
-                } else {
-                    // No category specified - use broad match
-                    const broadSuppliers = await broadMatchPromise;
-                    rawSuppliers = dbSuppliers.length > 0 ? dbSuppliers : broadSuppliers;
-                }
+                    })
+                    : []; // No category = no results
 
-                // Map supplier data with actual pricing from products
+                // Map supplier data — NO fake prices or ratings
                 suppliers = rawSuppliers
                     .map(s => {
-                        const matchScore = calculateMatchScore(s, userRequirements, matchedCategory ?? undefined);
-                        const rating = Math.min(5, 3.5 + (matchScore / 66));
-
-                        // Get actual price from products if available
                         const productWithPrice = s.products.find(p => p.price);
-                        const price = productWithPrice?.price
+                        const hasProducts = s.products.length > 0;
+                        const hasRealPrice = !!productWithPrice?.price;
+
+                        const matchScore = calculateMatchScore(
+                            { ...s, hasProducts, hasRealPrice },
+                            userRequirements,
+                            matchedCategory ?? undefined
+                        );
+
+                        // Real price only — no fake random prices
+                        const price = hasRealPrice
                             ? `₹${productWithPrice.price}`
-                            : `₹${Math.floor(Math.random() * 40) + 5}`;
+                            : "Contact for pricing";
                         const priceUnit = productWithPrice?.priceUnit || "piece";
-                        const moq = productWithPrice?.moq || s.moq || `${(Math.floor(Math.random() * 10) + 1) * 100} pcs`;
+                        const moq = productWithPrice?.moq || s.moq || "Contact for MOQ";
 
                         return {
                             id: s.id,
@@ -343,19 +317,13 @@ export async function POST(request: NextRequest) {
                             phone: s.phone || undefined,
                             description: s.description || undefined,
                             matchScore,
-                            rating: Math.round(rating * 10) / 10,
+                            rating: null, // Only show real ratings when available
                             price,
                             priceUnit,
                         };
                     })
-                    .filter(s => s.matchScore > 0) // Remove suppliers with no category match
-                    .sort((a, b) => {
-                        if (b.matchScore !== a.matchScore) return b.matchScore - a.matchScore;
-                        if (b.rating !== a.rating) return b.rating - a.rating;
-                        const priceA = parseInt(a.price.replace(/[₹,]/g, ""));
-                        const priceB = parseInt(b.price.replace(/[₹,]/g, ""));
-                        return priceA - priceB;
-                    })
+                    .filter(s => s.matchScore > 0)
+                    .sort((a, b) => b.matchScore - a.matchScore)
                     .slice(0, 5);
 
                 if (suppliers.length > 0) {

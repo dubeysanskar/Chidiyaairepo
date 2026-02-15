@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
-import { sendSupplierWelcomeEmail, sendOTPEmail, generateOTP } from "../../../../lib/email";
+import { sendSupplierWelcomeEmail, sendAdminNewSupplierNotification } from "../../../../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
 
@@ -20,6 +20,14 @@ export async function POST(req: Request) {
                 location,
                 categoryId,
                 categoryDescription,
+                // GST lookup fields (new)
+                gstNumber,
+                gstFetchStatus,
+                gstLegalName,
+                gstPrincipalPlace,
+                gstApiStatus,
+                gstRegisteredOn,
+                gstConsentGiven,
                 // Legacy fields (for backward compatibility)
                 productCategories,
                 capacity,
@@ -44,12 +52,7 @@ export async function POST(req: Request) {
             const hashedPassword = await bcrypt.hash(password, 10);
             console.log("Password hashed");
 
-            // Generate OTP for email verification
-            const otp = generateOTP();
-            const otpExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-            console.log("OTP generated");
-
-            // Create supplier with simplified fields
+            // Create supplier with GST lookup data
             let supplier;
             try {
                 supplier = await prisma.supplier.create({
@@ -58,17 +61,24 @@ export async function POST(req: Request) {
                         email,
                         phone,
                         password: hashedPassword,
-                        // New simplified field
+                        // Location
                         serviceLocations: location || serviceLocations || "",
-                        // Legacy fields (for backward compatibility)
+                        // GST lookup data
+                        gstNumber: gstNumber || null,
+                        gstFetchStatus: gstFetchStatus || null,
+                        gstLegalName: gstLegalName || null,
+                        gstPrincipalPlace: gstPrincipalPlace || null,
+                        gstApiStatus: gstApiStatus || null,
+                        gstRegisteredOn: gstRegisteredOn || null,
+                        gstConsentGiven: gstConsentGiven || false,
+                        gstConsentAt: gstConsentGiven ? new Date() : null,
+                        // Legacy fields
                         productCategories: Array.isArray(productCategories) ? productCategories : [],
                         capacity: capacity || null,
                         moq: moq || null,
                         description: categoryDescription || "",
                         status: "pending",
                         emailVerified: false,
-                        verificationOTP: otp,
-                        otpExpiry
                     },
                     select: {
                         id: true,
@@ -101,10 +111,34 @@ export async function POST(req: Request) {
                 }
             }
 
-            // Send emails (non-blocking)
-            sendOTPEmail(email, otp, companyName).catch(e => console.error("OTP Email Error:", e));
+            // Log GST lookup event if GST was fetched
+            if (gstFetchStatus) {
+                try {
+                    await prisma.verificationEvent.create({
+                        data: {
+                            supplierId: supplier.id,
+                            eventType: "gst_lookup",
+                            payload: {
+                                gstNumber,
+                                gstFetchStatus,
+                                gstLegalName,
+                                gstPrincipalPlace,
+                                gstApiStatus,
+                            },
+                        },
+                    });
+                } catch (eventErr) {
+                    console.error("Error logging verification event:", eventErr);
+                }
+            }
+
+            // Send welcome email to supplier (non-blocking)
             sendSupplierWelcomeEmail(email, companyName).catch(e => console.error("Welcome Email Error:", e));
-            console.log("Emails queued");
+            console.log("Welcome email queued");
+
+            // Notify admins about new registration (non-blocking)
+            sendAdminNewSupplierNotification(companyName, email, phone).catch(e => console.error("Admin Notification Error:", e));
+            console.log("Admin notification queued");
 
             const token = jwt.sign(
                 { id: supplier.id, type: "supplier" },
@@ -153,9 +187,11 @@ export async function POST(req: Request) {
                 );
             }
 
-            if (supplier.status !== "approved") {
+            // Allow pending suppliers to login — they'll see the pending page
+            // Only block banned/suspended users
+            if (supplier.status === "banned" || supplier.status === "suspended") {
                 return NextResponse.json(
-                    { error: "Account not approved yet" },
+                    { error: "Account has been suspended. Contact support." },
                     { status: 403 }
                 );
             }

@@ -114,8 +114,17 @@ model Supplier {
   employeeCount     String?
   certifications    String?
   
+  // GST Lookup Data
+  gstFetchStatus    String?   // "fetched", "manual", "failed"
+  gstLegalName      String?   // Legal name from GST lookup
+  gstRegisteredOn   String?   // Registration date from GST
+  gstPrincipalPlace String?   // Principal place of business
+  gstApiStatus      String?   // "Active", "Inactive" etc.
+  gstConsentGiven   Boolean   @default(false)
+  gstConsentAt      DateTime?
+  
   // Verification
-  status            String   @default("pending") // pending, approved, suspended, banned
+  status            String   @default("pending") // pending, pending_admin_review, approved, suspended, banned
   badges            String[] // gst, premium, verified, top_rated, fast_delivery
   suspendedUntil    DateTime? // For time-based suspensions
   documents         SupplierDocument[]
@@ -151,8 +160,27 @@ model Supplier {
   supplierCategories    SupplierCategory[]
   trialExtensionRequests TrialExtensionRequest[]
   subscriptions         SubscriptionPayment[]
+  verificationEvents    VerificationEvent[]
 
   @@map("suppliers")
+}
+
+// ============================================
+// VERIFICATION AUDIT LOG
+// ============================================
+
+model VerificationEvent {
+  id          String   @id @default(uuid())
+  supplierId  String
+  eventType   String   // gst_lookup, doc_upload, admin_approve, admin_reject, admin_request_info
+  payload     Json?
+  createdAt   DateTime @default(now())
+
+  // Relations
+  supplier    Supplier @relation(fields: [supplierId], references: [id], onDelete: Cascade)
+
+  @@index([supplierId])
+  @@map("verification_events")
 }
 
 // ============================================
@@ -364,6 +392,9 @@ model Buyer {
 model ChatSession {
   id            String   @id @default(uuid())
   buyerId       String
+  
+  // Chat title (first user message, 30 char limit)
+  title         String?
   
   // Requirements from questionnaire
   location      String?

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../lib/prisma";
-import { sendAdminActionEmail } from "../../../../lib/email";
+import { sendAdminActionEmail, sendSupplierApprovedEmail } from "../../../../lib/email";
 
 export async function GET() {
     try {
@@ -110,6 +110,13 @@ export async function PUT(req: Request) {
                 'supplier',
                 emailDetails
             ).catch(console.error);
+        }
+
+        // Send approval confirmation email when supplier is approved
+        if (action === "approve" && supplier.email) {
+            sendSupplierApprovedEmail(supplier.email, supplier.companyName).catch(e =>
+                console.error("Approval Email Error:", e)
+            );
         }
 
         return NextResponse.json(supplier);

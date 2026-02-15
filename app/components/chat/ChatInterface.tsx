@@ -19,13 +19,17 @@ interface UserRequirements {
 
 interface ChatInterfaceProps {
     userRequirements: UserRequirements;
+    sessionId?: string | null;
+    onSessionCreated?: (sessionId: string, title: string) => void;
+    isLoggedIn?: boolean;
 }
 
-export default function ChatInterface({ userRequirements }: ChatInterfaceProps) {
+export default function ChatInterface({ userRequirements, sessionId, onSessionCreated, isLoggedIn }: ChatInterfaceProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [hasStarted, setHasStarted] = useState(false);
+    const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionId || null);
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const scrollToBottom = () => {
@@ -36,18 +40,48 @@ export default function ChatInterface({ userRequirements }: ChatInterfaceProps) 
         scrollToBottom();
     }, [messages]);
 
-    // Send initial greeting when chat starts
+    // Load existing session or start new one
     useEffect(() => {
-        if (!hasStarted) {
+        if (sessionId) {
+            loadSession(sessionId);
+        } else if (!hasStarted) {
             setHasStarted(true);
+            setMessages([]);
             sendInitialGreeting();
         }
-    }, [hasStarted]);
+    }, [sessionId]);
+
+    const loadSession = async (sid: string) => {
+        setIsLoading(true);
+        try {
+            const res = await fetch(`/api/buyer/chat-session?sessionId=${sid}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.session) {
+                    const loadedMessages: Message[] = data.session.messages.map((m: { id: string; role: string; content: string; createdAt: string }) => ({
+                        id: m.id,
+                        role: m.role as "user" | "assistant",
+                        content: m.content,
+                        timestamp: new Date(m.createdAt),
+                    }));
+                    setMessages(loadedMessages);
+                    setCurrentSessionId(sid);
+                    setHasStarted(true);
+
+                    // Restore requirements from session if available
+                    if (data.session.location) userRequirements.location = data.session.location;
+                    if (data.session.category) userRequirements.category = data.session.category;
+                }
+            }
+        } catch (error) {
+            console.error("Failed to load session:", error);
+        }
+        setIsLoading(false);
+    };
 
     const sendInitialGreeting = async () => {
         setIsLoading(true);
 
-        // Create initial message based on requirements
         const reqList = [];
         if (userRequirements.location) reqList.push("Location: " + userRequirements.location);
         if (userRequirements.category) reqList.push("Category: " + userRequirements.category);
@@ -88,7 +122,7 @@ export default function ChatInterface({ userRequirements }: ChatInterfaceProps) 
                 {
                     id: "1",
                     role: "assistant",
-                    content: "Hello! Welcome to ChidiyaAI. I am here to help you find the best suppliers for your business needs. How can I assist you today?",
+                    content: "Hello! Welcome to ChidiyaAI. I'm here to help you find the best suppliers for your business. What product are you looking for today?",
                     timestamp: new Date(),
                 },
             ]);
@@ -110,6 +144,27 @@ export default function ChatInterface({ userRequirements }: ChatInterfaceProps) 
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
         setIsLoading(true);
+
+        // Create session on first user message if logged in
+        if (!currentSessionId && isLoggedIn) {
+            try {
+                const sessionRes = await fetch("/api/buyer/chat-session", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        ...userRequirements,
+                        title: userMessage.content.substring(0, 30),
+                    }),
+                });
+                const sessionData = await sessionRes.json();
+                if (sessionData.success) {
+                    setCurrentSessionId(sessionData.sessionId);
+                    onSessionCreated?.(sessionData.sessionId, userMessage.content.substring(0, 30));
+                }
+            } catch (error) {
+                console.error("Failed to create session:", error);
+            }
+        }
 
         try {
             const conversationHistory = messages.map((msg) => ({
@@ -258,7 +313,7 @@ export default function ChatInterface({ userRequirements }: ChatInterfaceProps) 
                         type="text"
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
-                        onKeyPress={handleKeyPress}
+                        onKeyDown={handleKeyPress}
                         placeholder="Type your message..."
                         disabled={isLoading}
                         className="flex-1 px-4 py-3 bg-slate-800 border border-slate-700 rounded-xl text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all disabled:opacity-50"
