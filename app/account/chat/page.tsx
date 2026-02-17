@@ -111,7 +111,14 @@ function ChatContent() {
 
     // Chat history state
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
-    const [showHistoryDropdown, setShowHistoryDropdown] = useState(true);
+    const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
+
+    // Open sidebar by default only on desktop
+    useEffect(() => {
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setShowHistoryDropdown(true);
+        }
+    }, []);
 
     // Theme state — light by default
     const [darkMode, setDarkMode] = useState(false);
