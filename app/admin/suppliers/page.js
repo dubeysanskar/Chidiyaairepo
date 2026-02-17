@@ -298,7 +298,7 @@ export default function SuppliersPage() {
 
                             <div className="sup-card-actions" onClick={(e) => e.stopPropagation()}>
                                 {/* Pending Actions */}
-                                {supplier.status === "pending" && (
+                                {(supplier.status === "pending" || supplier.status === "pending_admin_review") && (
                                     <>
                                         <button onClick={() => openConfirmDialog(supplier, "approve")} className="sup-btn sup-btn-approve">
                                             ✓ Approve

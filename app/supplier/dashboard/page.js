@@ -668,7 +668,7 @@ export default function SupplierDashboard() {
                         {[
                             { id: "inquiries", label: "Inquiries", icon: "📥" },
                             { id: "dealsWon", label: "Deals Won", icon: "🤝" },
-                            { id: "analytics", label: "Analytics", icon: "📊", lockable: true },
+                            // { id: "analytics", label: "Analytics", icon: "📊", lockable: true },
                             { id: "profile", label: "Company Profile", icon: "🏢" },
                         ].map((item) => (
                             <button

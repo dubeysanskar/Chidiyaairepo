@@ -79,13 +79,26 @@ export default function SupplierRegister() {
     };
 
     // File upload helper
-    const uploadFile = async (file) => {
+    const uploadFile = async (file, docType = "general") => {
         const formDataObj = new FormData();
         formDataObj.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: formDataObj });
-        const data = await res.json();
-        if (data.url) return data.url;
-        throw new Error("Upload failed");
+        formDataObj.append("type", "document"); // Organize all docs under 'document' folder
+
+        try {
+            const res = await fetch("/api/upload", { method: "POST", body: formDataObj });
+            const data = await res.json();
+
+            if (!res.ok) {
+                console.error(`Upload error for ${file.name}:`, data);
+                throw new Error(data.error || "Upload failed");
+            }
+
+            if (data.url) return data.url;
+            throw new Error("No URL returned from upload");
+        } catch (err) {
+            console.error("Upload exception:", err);
+            throw err;
+        }
     };
 
     const handleFileChange = (field) => (e) => {

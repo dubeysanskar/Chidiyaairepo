@@ -131,6 +131,17 @@ export default function ChatInterface({ userRequirements, sessionId, onSessionCr
         setIsLoading(false);
     };
 
+    // Load existing session or start new one
+    useEffect(() => {
+        if (sessionId) {
+            loadSession(sessionId);
+        } else if (!hasStarted) {
+            setHasStarted(true);
+            setMessages([]);
+            sendInitialGreeting();
+        }
+    }, [sessionId]);
+
     const sendMessage = async () => {
         if (!input.trim() || isLoading) return;
 
@@ -278,7 +289,7 @@ export default function ChatInterface({ userRequirements, sessionId, onSessionCr
                         }}
                     >
                         <div
-                            className={`max-w-[80%] rounded-2xl px-4 py-3 ${message.role === "user"
+                            className={`max-w-[90%] md:max-w-[80%] rounded-2xl px-4 py-3 ${message.role === "user"
                                 ? "bg-blue-500 text-white rounded-br-md"
                                 : "bg-slate-800 text-slate-100 rounded-bl-md border border-slate-700"
                                 }`}

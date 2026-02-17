@@ -13,12 +13,17 @@ export async function POST(request: NextRequest) {
         const file = formData.get("file") as File | null;
         const type = formData.get("type") as string || "general"; // product, profile, general
 
+        console.log(`[Upload API] Received upload request. Type: ${type}`);
+
         if (!file) {
+            console.error("[Upload API] No file provided");
             return NextResponse.json(
                 { error: "No file provided" },
                 { status: 400 }
             );
         }
+
+        console.log(`[Upload API] File details: Name=${file.name}, Type=${file.type}, Size=${file.size}`);
 
         // Validate file type
         const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];

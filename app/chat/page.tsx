@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Image from "next/image";
 import PreChatQuestionnaire from "@/app/components/chat/PreChatQuestionnaire";
+import Link from "next/link";
 import ChatInterface from "@/app/components/chat/ChatInterface";
 
 interface UserRequirements {
@@ -25,7 +26,14 @@ interface ChatSession {
 
 export default function ChatPage() {
     const [showQuestionnaire, setShowQuestionnaire] = useState(true);
-    const [sidebarOpen, setSidebarOpen] = useState(true);
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    useEffect(() => {
+        // Open sidebar by default only on desktop
+        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
+            setSidebarOpen(true);
+        }
+    }, []);
     const [chatSessions, setChatSessions] = useState<ChatSession[]>([]);
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -132,28 +140,51 @@ export default function ChatPage() {
             </div>
 
             {/* Main layout */}
-            <div className="relative z-10 h-screen flex">
+            <div className="relative z-10 h-screen flex overflow-hidden">
+                {/* Mobile Sidebar Overlay */}
+                {sidebarOpen && (
+                    <div
+                        className="fixed inset-0 bg-black/60 z-40 md:hidden backdrop-blur-sm"
+                        onClick={() => setSidebarOpen(false)}
+                    ></div>
+                )}
+
                 {/* Sidebar */}
                 <div
-                    className={`${sidebarOpen ? "w-[280px]" : "w-0"
-                        } transition-all duration-300 flex-shrink-0 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800/60 flex flex-col overflow-hidden`}
-                    style={{ minWidth: sidebarOpen ? 280 : 0 }}
+                    className={`${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+                        } md:translate-x-0 fixed md:relative z-50 h-full w-[280px] transition-transform duration-300 ease-in-out flex-shrink-0 bg-slate-900/95 backdrop-blur-xl border-r border-slate-800/60 flex flex-col overflow-hidden ${!sidebarOpen && "md:w-0 md:min-w-0 md:border-r-0"
+                        }`}
+                    style={{
+                        width: 280,
+                        // On desktop, we want to animate width if we want to support collapsing there too, 
+                        // but for now let's keep the existing toggle behavior for desktop if that was the intent,
+                        // or just use specific classes. 
+                        // The previous code used width transition. Let's adapt.
+                    }}
                 >
                     {/* Sidebar Header */}
-                    <div className="p-4 border-b border-slate-800/60">
+                    <div className="p-4 border-b border-slate-800/60 flex items-center justify-between">
                         <button
                             onClick={handleNewChat}
-                            className="w-full flex items-center gap-3 px-4 py-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-xl text-white text-sm font-medium transition-all hover:border-slate-600"
+                            className="flex-1 flex items-center justify-center gap-2 px-4 py-3 bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/50 rounded-xl text-white text-sm font-medium transition-all hover:border-slate-600"
                         >
                             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                             </svg>
                             New Chat
                         </button>
+                        <button
+                            onClick={() => setSidebarOpen(false)}
+                            className="md:hidden ml-2 p-2 text-slate-400 hover:text-white"
+                        >
+                            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
                     </div>
 
                     {/* Session List */}
-                    <div className="flex-1 overflow-y-auto p-2">
+                    <div className="flex-1 overflow-y-auto p-2 scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
                         {loadingHistory ? (
                             <div className="flex items-center justify-center p-8">
                                 <div className="w-5 h-5 border-2 border-slate-600 border-t-blue-400 rounded-full animate-spin"></div>
@@ -161,12 +192,12 @@ export default function ChatPage() {
                         ) : !isLoggedIn ? (
                             <div className="p-4 text-center">
                                 <p className="text-slate-500 text-xs mb-3">Sign in to save chat history</p>
-                                <a
+                                <Link
                                     href="/auth/signin"
                                     className="text-blue-400 text-xs hover:underline"
                                 >
                                     Sign In →
-                                </a>
+                                </Link>
                             </div>
                         ) : chatSessions.length === 0 ? (
                             <div className="p-4 text-center">
@@ -204,7 +235,7 @@ export default function ChatPage() {
 
                     {/* Sidebar Footer */}
                     <div className="p-3 border-t border-slate-800/60">
-                        <a
+                        <Link
                             href="/"
                             className="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-white text-sm rounded-lg hover:bg-slate-800/60 transition-colors"
                         >
@@ -212,14 +243,14 @@ export default function ChatPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
                             </svg>
                             Home
-                        </a>
+                        </Link>
                     </div>
                 </div>
 
                 {/* Main Content */}
-                <div className="flex-1 flex flex-col min-w-0">
+                <div className="flex-1 flex flex-col min-w-0 h-full w-full">
                     {/* Top Nav */}
-                    <nav className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-md">
+                    <nav className="flex items-center justify-between px-4 py-3 border-b border-slate-800/50 bg-slate-900/50 backdrop-blur-md sticky top-0 z-30">
                         <div className="flex items-center gap-3">
                             {/* Sidebar toggle */}
                             <button
@@ -227,11 +258,7 @@ export default function ChatPage() {
                                 className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800/60 transition-colors"
                             >
                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    {sidebarOpen ? (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
-                                    ) : (
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                    )}
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
                                 </svg>
                             </button>
                             <Image
@@ -239,23 +266,24 @@ export default function ChatPage() {
                                 alt="ChidiyaAI"
                                 width={130}
                                 height={35}
-                                style={{ height: "30px", width: "auto" }}
+                                style={{ height: "24px", width: "auto" }}
                                 priority
+                                className="md:h-[30px]"
                             />
                         </div>
                         <div className="flex items-center gap-3">
-                            <a
+                            <Link
                                 href="/"
-                                className="text-sm text-slate-400 hover:text-white transition-colors"
+                                className="hidden md:block text-sm text-slate-400 hover:text-white transition-colors"
                             >
                                 Home
-                            </a>
-                            <a
+                            </Link>
+                            <Link
                                 href="/supplier"
-                                className="text-sm text-slate-400 hover:text-white transition-colors"
+                                className="text-xs md:text-sm text-slate-400 hover:text-white transition-colors"
                             >
                                 For Suppliers
-                            </a>
+                            </Link>
                         </div>
                     </nav>
 
