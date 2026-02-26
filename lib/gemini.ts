@@ -137,7 +137,19 @@ export function getMissingSpecs(
     );
 }
 
-// Build dynamic system prompt with category context
+// Product data for context
+export interface ProductContext {
+    name: string;
+    price?: number;
+    priceUnit?: string;
+    moq?: string;
+    specifications?: Record<string, string>;
+    supplierName: string;
+    supplierCity: string;
+    supplierBadges: string[];
+}
+
+// Build dynamic system prompt with category context and product catalog
 export function buildSystemPrompt(
     categories: CategoryContext[],
     matchedCategory?: CategoryContext,
@@ -145,7 +157,8 @@ export function buildSystemPrompt(
     missingSpecs?: CategorySpec[],
     suppliersFound?: boolean,
     categoryNotFound?: boolean,
-    availableCategories?: string[]
+    availableCategories?: string[],
+    productCatalog?: ProductContext[]
 ): string {
     let prompt = `You are Chidiya, a warm and friendly B2B sourcing assistant for India. You speak like a helpful friend, not a robot.
 
@@ -166,6 +179,8 @@ CRITICAL RULES:
 - If user just says "hi" or "hey" - greet them and ask what product they need. Do NOT suggest any specific products.
 - If user types gibberish or unclear text - ask them to clarify what product they need
 - Do NOT mention or suggest specific products (like Paper Cups or Boxes) unless the user has asked for them
+- When you have enough info to match products, STOP asking questions and let the system show results
+- Ask AT MOST 1 clarifying question. After that, show results with whatever info you have.
 
 `;
 
@@ -195,24 +210,27 @@ AVAILABLE CATEGORIES: ${topCategories}
     if (suppliersFound) {
         prompt += `WHEN SHOWING SUPPLIERS:
 - Quick acknowledgment like "Got it! Here are some matches for you."
-- The supplier cards appear BELOW your message automatically
-- You can suggest being more specific for better results
+- The supplier table/cards appear BELOW your message automatically
+- You can mention key facts from the product data to help user decide
+- If multiple specs exist, briefly mention the range (e.g., "sizes from 65ml to 250ml available")
 
-GOOD: "Found some paper cup suppliers in Noida! These are sorted by relevance."
+GOOD: "Found some great options! Check the results below - prices range from Rs 1.50 to Rs 3 per piece."
 BAD: "Based on your requirements, I have found the following suppliers for paper cups."
 
-DON'T list the suppliers - the cards do that. Just add a friendly note!
+DON'T list the suppliers - the table does that. Just add a helpful note!
 `;
     } else {
         prompt += `WHEN NEEDING MORE INFO:
-- Ask ONE simple question max
+- Ask ONE simple question max based on available product specifications
 - Be casual and direct
 - DON'T repeat back what they said
+- Use the product catalog knowledge to ask SMART questions
+- If the category has specific sizes, types, or options - ask about the most important one
 
-GOOD: "Paper cups - got it! What size do you need?"
+GOOD: "Paper cups - got it! What size - 65ml, 90ml, or 250ml?"
 BAD: "I understand you're looking for paper cups. Could you please specify the size?"
 
-If they say "no" or "show results" - just say we need a bit more info or show what we have!
+If they say "no" or "show results" - just say pulling up results!
 `;
     }
 
@@ -220,31 +238,59 @@ If they say "no" or "show results" - just say we need a bit more info or show wh
     // Add category knowledge
     if (categories.length > 0) {
         prompt += `AVAILABLE CATEGORIES:\n`;
-        for (const cat of categories.slice(0, 8)) {
-            prompt += `- ${cat.name}\n`;
+        for (const cat of categories.slice(0, 10)) {
+            prompt += `- ${cat.name}`;
+            if (cat.commonNames && cat.commonNames.length > 0) {
+                prompt += ` (also known as: ${cat.commonNames.slice(0, 3).join(", ")})`;
+            }
+            prompt += `\n`;
         }
         prompt += "\n";
     }
 
-
-    // Add matched category context
+    // Add matched category context with specs
     if (matchedCategory) {
         prompt += `USER IS LOOKING FOR: ${matchedCategory.name}\n`;
 
+        // Show available specifications so AI can ask smart questions
+        if (matchedCategory.specifications && matchedCategory.specifications.length > 0) {
+            prompt += `Available specifications for ${matchedCategory.name}:\n`;
+            for (const spec of matchedCategory.specifications.slice(0, 5)) {
+                prompt += `  - ${spec.name}: ${spec.options.join(", ")}${spec.important ? " (important)" : ""}\n`;
+            }
+        }
+
         if (providedSpecs && providedSpecs.length > 0) {
-            prompt += `Details provided: `;
+            prompt += `User already specified: `;
             prompt += providedSpecs.map(s => `${s.key}=${s.value}`).join(", ");
             prompt += "\n";
         }
 
         if (!suppliersFound && missingSpecs && missingSpecs.length > 0) {
             const nextSpec = missingSpecs[0];
-            prompt += `You may ask about: ${nextSpec.name}\n`;
+            prompt += `You may ask about: ${nextSpec.name} (options: ${nextSpec.options.slice(0, 5).join(", ")})\n`;
         }
     }
 
-    prompt += `
-Remember: Supplier cards appear BELOW your text message. Your job is just to acknowledge and guide, not list anything.`;
+    // Add product catalog for intelligent matching
+    if (productCatalog && productCatalog.length > 0) {
+        prompt += `\nPRODUCT CATALOG (real products from our database):\n`;
+        for (const product of productCatalog.slice(0, 15)) {
+            let line = `  - ${product.name}`;
+            if (product.price) line += ` | Rs ${product.price}/${product.priceUnit || "piece"}`;
+            if (product.moq) line += ` | MOQ: ${product.moq}`;
+            line += ` | by ${product.supplierName} (${product.supplierCity})`;
+            if (product.supplierBadges.length > 0) line += ` [${product.supplierBadges.join(", ")}]`;
+            if (product.specifications) {
+                const specs = Object.entries(product.specifications).slice(0, 3).map(([k, v]) => `${k}:${v}`).join(", ");
+                if (specs) line += ` | specs: ${specs}`;
+            }
+            prompt += line + `\n`;
+        }
+        prompt += `\nUse this catalog to make intelligent comparisons and help the user find the best match.\n`;
+    }
+
+    prompt += `\nRemember: Supplier cards/table appear BELOW your text message. Your job is just to acknowledge, provide quick insights from the data, and guide.`;
 
     return prompt;
 }
@@ -262,6 +308,7 @@ export async function generateChatResponse(
         missingSpecs?: CategorySpec[];
         categoryNotFound?: boolean;
         availableCategories?: string[];
+        productCatalog?: ProductContext[];
     }
 ): Promise<string> {
     try {
@@ -279,7 +326,8 @@ export async function generateChatResponse(
                 categoryContext.missingSpecs,
                 suppliersFound,
                 categoryNotFound,
-                availableCategories
+                availableCategories,
+                categoryContext.productCatalog
             )
             : buildSystemPrompt([], undefined, undefined, undefined, suppliersFound, false, []);
 
@@ -341,6 +389,7 @@ export async function generateChatResponse(
 }
 
 // Check if we should fetch suppliers based on conversation
+// AGGRESSIVE: Show results FAST — don't make user wait through 4-5 questions
 export function shouldFetchSuppliers(
     messageCount: number,
     lastMessage: string,
@@ -358,19 +407,21 @@ export function shouldFetchSuppliers(
     const wantsResults = /show\s+(me\s+)?results?/i.test(lowerMessage) ||
         /show\s+(me\s+)?supplier/i.test(lowerMessage) ||
         /^yes$/i.test(lowerMessage) ||
-        /no\s+preference/i.test(lowerMessage);
+        /no\s+preference/i.test(lowerMessage) ||
+        /show\s+me/i.test(lowerMessage) ||
+        /find\s+(me)?/i.test(lowerMessage);
     if (wantsResults) return true;
 
-    // If user has provided specs, show after 2+ messages
+    // If user has provided ANY specs → show immediately (don't wait for messageCount >= 2)
     const hasSpecs = providedSpecs && providedSpecs.length >= 1;
-    if (hasSpecs && messageCount >= 2) return true;
+    if (hasSpecs) return true;
 
-    // After 3+ messages AND user has been providing details (not just chatting)
+    // If user provides a number (quantity, size, etc.) → show results
     const hasQuantity = /\d+/.test(lastMessage);
-    if (hasQuantity && messageCount >= 3) return true;
+    if (hasQuantity && messageCount >= 1) return true;
 
-    // After 5+ messages, show what we have (they've been chatting enough)
-    if (messageCount >= 5) return true;
+    // After 2 messages (not 5), show what we have — user has been chatting enough
+    if (messageCount >= 2) return true;
 
     return false;
 }

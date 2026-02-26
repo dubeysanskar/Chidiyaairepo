@@ -6,6 +6,7 @@ import {
     UserRequirements,
     CategoryContext,
     CategorySpec,
+    ProductContext,
     extractProvidedSpecs,
     matchCategory,
     getMissingSpecs
@@ -265,11 +266,13 @@ export async function POST(request: NextRequest) {
                         description: true,
                         products: {
                             where: { isActive: true },
-                            take: 5,
+                            take: 10,
                             select: {
+                                name: true,
                                 price: true,
                                 priceUnit: true,
                                 moq: true,
+                                specifications: true,
                             },
                         },
                     },
@@ -336,6 +339,53 @@ export async function POST(request: NextRequest) {
             }
         }
 
+        // Build product catalog for AI context
+        let productCatalog: ProductContext[] = [];
+        if (matchedCategory) {
+            try {
+                const catalogProducts = await prisma.product.findMany({
+                    where: {
+                        isActive: true,
+                        supplier: { status: "approved" },
+                        OR: [
+                            { categoryTemplate: { name: matchedCategory.name } },
+                            { category: { contains: matchedCategory.name, mode: "insensitive" } },
+                        ],
+                    },
+                    take: 15,
+                    select: {
+                        name: true,
+                        price: true,
+                        priceUnit: true,
+                        moq: true,
+                        specifications: true,
+                        supplier: {
+                            select: {
+                                companyName: true,
+                                city: true,
+                                badges: true,
+                            },
+                        },
+                    },
+                });
+
+                productCatalog = catalogProducts.map(p => ({
+                    name: p.name,
+                    price: p.price || undefined,
+                    priceUnit: p.priceUnit || undefined,
+                    moq: p.moq || undefined,
+                    specifications: (p.specifications && typeof p.specifications === 'object' && !Array.isArray(p.specifications))
+                        ? p.specifications as Record<string, string>
+                        : undefined,
+                    supplierName: p.supplier.companyName,
+                    supplierCity: p.supplier.city || "India",
+                    supplierBadges: p.supplier.badges || [],
+                }));
+            } catch (catalogError) {
+                console.error("Product catalog fetch error:", catalogError);
+            }
+        }
+
         // Generate AI response with category context
         const aiResponse = await generateChatResponse(
             message,
@@ -349,6 +399,7 @@ export async function POST(request: NextRequest) {
                 missingSpecs,
                 categoryNotFound,
                 availableCategories,
+                productCatalog,
             }
         );
 

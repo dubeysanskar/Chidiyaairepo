@@ -114,11 +114,18 @@ function ChatContent() {
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
     const [showHistoryDropdown, setShowHistoryDropdown] = useState(false);
 
-    // Open sidebar by default only on desktop
+    // Mobile detection
+    const [isMobile, setIsMobile] = useState(false);
     useEffect(() => {
-        if (typeof window !== 'undefined' && window.innerWidth >= 768) {
-            setShowHistoryDropdown(true);
-        }
+        const checkMobile = () => {
+            const mobile = window.innerWidth < 768;
+            setIsMobile(mobile);
+            if (!mobile) setShowHistoryDropdown(true);
+            else setShowHistoryDropdown(false);
+        };
+        checkMobile();
+        window.addEventListener('resize', checkMobile);
+        return () => window.removeEventListener('resize', checkMobile);
     }, []);
 
     // Theme state — light by default
@@ -1035,10 +1042,34 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             overflow: "hidden",
             transition: "background-color 0.3s ease"
         }}>
+            {/* ============ SIDEBAR BACKDROP (mobile only) ============ */}
+            {isMobile && showHistoryDropdown && (
+                <div
+                    onClick={() => setShowHistoryDropdown(false)}
+                    style={{
+                        position: "fixed",
+                        top: 0, left: 0, right: 0, bottom: 0,
+                        backgroundColor: "rgba(0,0,0,0.5)",
+                        zIndex: 998,
+                        transition: "opacity 0.3s ease"
+                    }}
+                />
+            )}
+
             {/* ============ SIDEBAR ============ */}
             <div style={{
-                width: showHistoryDropdown ? "280px" : "0px",
-                minWidth: showHistoryDropdown ? "280px" : "0px",
+                ...(isMobile ? {
+                    position: "fixed" as const,
+                    top: 0,
+                    left: showHistoryDropdown ? 0 : -300,
+                    width: "280px",
+                    height: "100vh",
+                    zIndex: 999,
+                    boxShadow: showHistoryDropdown ? "4px 0 24px rgba(0,0,0,0.2)" : "none",
+                } : {
+                    width: showHistoryDropdown ? "280px" : "0px",
+                    minWidth: showHistoryDropdown ? "280px" : "0px",
+                }),
                 transition: "all 0.3s ease",
                 backgroundColor: t.bgSecondary,
                 borderRight: showHistoryDropdown ? `1px solid ${t.border}` : "none",
@@ -1106,7 +1137,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                 backgroundColor: currentSessionId === item.id ? t.sidebarActive : "transparent",
                                                 color: currentSessionId === item.id ? t.text : t.textSecondary
                                             }}
-                                            onClick={() => loadChatFromHistory(item)}
+                                            onClick={() => { loadChatFromHistory(item); if (isMobile) setShowHistoryDropdown(false); }}
                                             onMouseEnter={(e) => {
                                                 if (currentSessionId !== item.id) e.currentTarget.style.backgroundColor = t.sidebarHover;
                                             }}
@@ -1357,13 +1388,13 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                         </Link>
                         <span style={{ width: "6px", height: "6px", backgroundColor: "#22c55e", borderRadius: "50%" }} />
                     </div>
-                    <div style={{ display: "flex", gap: "16px", fontSize: "14px", alignItems: "center" }}>
+                    <div style={{ display: "flex", gap: isMobile ? "8px" : "16px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
                         <button
                             onClick={() => setShowHelperGuide(!showHelperGuide)}
                             style={{
                                 display: "flex", alignItems: "center", gap: "6px",
-                                padding: "8px 14px",
+                                padding: isMobile ? "8px" : "8px 14px",
                                 background: showHelperGuide ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
                                 color: "white",
                                 border: "none",
@@ -1375,10 +1406,14 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             title="Ask Chidiya Helper"
                         >
                             <Image src="/favicon-32x32.png" alt="" width={16} height={16} style={{ borderRadius: "50%" }} />
-                            {showHelperGuide ? "Close Guide" : "Helper Guide"}
+                            {!isMobile && (showHelperGuide ? "Close Guide" : "Helper Guide")}
                         </button>
-                        <Link href="/" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Home</Link>
-                        <Link href="/account/dashboard" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
+                        {!isMobile && (
+                            <>
+                                <Link href="/" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Home</Link>
+                                <Link href="/account/dashboard" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
+                            </>
+                        )}
                     </div>
                 </header>
 
@@ -1406,14 +1441,14 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                 )}
 
                 {/* Messages */}
-                <main style={{ flex: 1, overflowY: "auto", padding: "20px", backgroundColor: t.bg, transition: "background-color 0.3s ease" }}>
+                <main style={{ flex: 1, overflowY: "auto", padding: isMobile ? "12px" : "20px", backgroundColor: t.bg, transition: "background-color 0.3s ease" }}>
                     <div style={{ maxWidth: "800px", margin: "0 auto" }}>
                         <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
                             {messages.map((message) => (
                                 <div key={message.id}>
                                     <div style={{ display: "flex", justifyContent: message.role === "user" ? "flex-end" : "flex-start" }}>
                                         <div style={{
-                                            maxWidth: "75%",
+                                            maxWidth: isMobile ? "90%" : "75%",
                                             padding: "14px 18px",
                                             borderRadius: message.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
                                             backgroundColor: message.role === "user" ? t.userBubble : t.aiBubble,
@@ -1444,112 +1479,182 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                             }}>
                                                 🎯 Top {message.suppliers.length} Matching Suppliers
                                             </p>
-                                            <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.border}` }}>
-                                                <table style={{
-                                                    width: "100%",
-                                                    borderCollapse: "collapse",
-                                                    fontSize: "13px",
-                                                    minWidth: "600px"
-                                                }}>
-                                                    <thead>
-                                                        <tr style={{ backgroundColor: darkMode ? "#1e293b" : "#f8fafc" }}>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Company</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>City</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Categories</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>MOQ</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Price</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Badges</th>
-                                                            <th style={{ padding: "10px 14px", textAlign: "center", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Actions</th>
-                                                        </tr>
-                                                    </thead>
-                                                    <tbody>
-                                                        {message.suppliers.map((supplier) => (
-                                                            <tr key={supplier.id} style={{ borderBottom: `1px solid ${t.border}` }}>
-                                                                <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500" }}>
-                                                                    {supplier.companyName}
-                                                                    {supplier.matchScore && (
-                                                                        <span style={{ display: "block", fontSize: "10px", color: "#22c55e", fontWeight: "400" }}>
-                                                                            {supplier.matchScore}% match
-                                                                        </span>
-                                                                    )}
-                                                                </td>
-                                                                <td style={{ padding: "12px 14px", color: t.textSecondary }}>{supplier.city || "—"}</td>
-                                                                <td style={{ padding: "12px 14px" }}>
-                                                                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                                                                        {supplier.productCategories?.slice(0, 2).map((cat, i) => (
-                                                                            <span key={i} style={{
-                                                                                padding: "2px 8px",
-                                                                                backgroundColor: darkMode ? "rgba(59,130,246,0.15)" : "#eff6ff",
-                                                                                color: darkMode ? "#93c5fd" : "#2563eb",
-                                                                                borderRadius: "8px",
-                                                                                fontSize: "11px"
-                                                                            }}>{cat}</span>
-                                                                        ))}
-                                                                    </div>
-                                                                </td>
-                                                                <td style={{ padding: "12px 14px", color: t.textSecondary, whiteSpace: "nowrap" }}>{supplier.moq || "—"}</td>
-                                                                <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500", whiteSpace: "nowrap" }}>
-                                                                    {supplier.price ? `₹${supplier.price}${supplier.priceUnit ? `/${supplier.priceUnit}` : ""}` : "—"}
-                                                                </td>
-                                                                <td style={{ padding: "12px 14px" }}>
-                                                                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
-                                                                        {supplier.badges?.slice(0, 2).map((badge, i) => (
-                                                                            <span key={i} style={{
-                                                                                padding: "2px 6px",
-                                                                                backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4",
-                                                                                color: darkMode ? "#86efac" : "#16a34a",
-                                                                                borderRadius: "6px",
-                                                                                fontSize: "10px"
-                                                                            }}>{badge}</span>
-                                                                        ))}
-                                                                    </div>
-                                                                </td>
-                                                                <td style={{ padding: "12px 14px", textAlign: "center" }}>
-                                                                    <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
-                                                                        <button
-                                                                            onClick={async () => {
-                                                                                const result = await handleViewContact(supplier.id);
-                                                                                if (result) {
-                                                                                    alert(`📞 Contact: ${result}`);
-                                                                                }
-                                                                            }}
-                                                                            style={{
-                                                                                padding: "6px 12px",
-                                                                                backgroundColor: "#3b82f6",
-                                                                                color: "white",
-                                                                                border: "none",
-                                                                                borderRadius: "6px",
-                                                                                fontSize: "11px",
-                                                                                cursor: "pointer",
-                                                                                fontWeight: "500",
-                                                                                whiteSpace: "nowrap"
-                                                                            }}
-                                                                        >
-                                                                            📞 Contact
-                                                                        </button>
-                                                                        <button
-                                                                            onClick={() => handleSaveSupplier(supplier.id)}
-                                                                            style={{
-                                                                                padding: "6px 12px",
-                                                                                backgroundColor: darkMode ? "#334155" : "#f1f5f9",
-                                                                                color: t.textSecondary,
-                                                                                border: `1px solid ${t.border}`,
-                                                                                borderRadius: "6px",
-                                                                                fontSize: "11px",
-                                                                                cursor: "pointer",
-                                                                                fontWeight: "500",
-                                                                                whiteSpace: "nowrap"
-                                                                            }}
-                                                                        >
-                                                                            ⭐ Save
-                                                                        </button>
-                                                                    </div>
-                                                                </td>
+
+                                            {/* Mobile: Stacked Cards */}
+                                            {isMobile ? (
+                                                <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+                                                    {message.suppliers.map((supplier) => (
+                                                        <div key={supplier.id} style={{
+                                                            borderRadius: "12px",
+                                                            border: `1px solid ${t.border}`,
+                                                            backgroundColor: darkMode ? "#1e293b" : "#f8fafc",
+                                                            padding: "14px",
+                                                            overflow: "hidden"
+                                                        }}>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "8px" }}>
+                                                                <div>
+                                                                    <p style={{ margin: 0, fontWeight: "600", fontSize: "14px", color: t.text }}>{supplier.companyName}</p>
+                                                                    <p style={{ margin: "2px 0 0", fontSize: "12px", color: t.textSecondary }}>📍 {supplier.city || "—"}</p>
+                                                                </div>
+                                                                {supplier.matchScore && (
+                                                                    <span style={{ padding: "2px 8px", backgroundColor: "rgba(34,197,94,0.15)", color: "#22c55e", borderRadius: "8px", fontSize: "11px", fontWeight: "600", whiteSpace: "nowrap" }}>
+                                                                        {supplier.matchScore}%
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "8px" }}>
+                                                                {supplier.productCategories?.slice(0, 2).map((cat, i) => (
+                                                                    <span key={i} style={{
+                                                                        padding: "2px 8px",
+                                                                        backgroundColor: darkMode ? "rgba(59,130,246,0.15)" : "#eff6ff",
+                                                                        color: darkMode ? "#93c5fd" : "#2563eb",
+                                                                        borderRadius: "8px", fontSize: "11px"
+                                                                    }}>{cat}</span>
+                                                                ))}
+                                                                {supplier.badges?.slice(0, 2).map((badge, i) => (
+                                                                    <span key={`b-${i}`} style={{
+                                                                        padding: "2px 6px",
+                                                                        backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4",
+                                                                        color: darkMode ? "#86efac" : "#16a34a",
+                                                                        borderRadius: "6px", fontSize: "10px"
+                                                                    }}>{badge}</span>
+                                                                ))}
+                                                            </div>
+                                                            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "12px", color: t.textSecondary, marginBottom: "10px" }}>
+                                                                <span>MOQ: {supplier.moq || "—"}</span>
+                                                                <span style={{ fontWeight: "600", color: t.text }}>
+                                                                    {supplier.price ? `₹${supplier.price}${supplier.priceUnit ? `/${supplier.priceUnit}` : ""}` : "Price: —"}
+                                                                </span>
+                                                            </div>
+                                                            <div style={{ display: "flex", gap: "8px" }}>
+                                                                <button
+                                                                    onClick={async () => {
+                                                                        const result = await handleViewContact(supplier.id);
+                                                                        if (result) { alert(`📞 Contact: ${result}`); }
+                                                                    }}
+                                                                    style={{ flex: 1, padding: "8px", backgroundColor: "#3b82f6", color: "white", border: "none", borderRadius: "8px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}
+                                                                >
+                                                                    📞 Contact
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleSaveSupplier(supplier.id)}
+                                                                    style={{ flex: 1, padding: "8px", backgroundColor: darkMode ? "#334155" : "#f1f5f9", color: t.textSecondary, border: `1px solid ${t.border}`, borderRadius: "8px", fontSize: "12px", cursor: "pointer", fontWeight: "600" }}
+                                                                >
+                                                                    ⭐ Save
+                                                                </button>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            ) : (
+                                                /* Desktop: Table */
+                                                <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                                    <table style={{
+                                                        width: "100%",
+                                                        borderCollapse: "collapse",
+                                                        fontSize: "13px",
+                                                        minWidth: "600px"
+                                                    }}>
+                                                        <thead>
+                                                            <tr style={{ backgroundColor: darkMode ? "#1e293b" : "#f8fafc" }}>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Company</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>City</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Categories</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>MOQ</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Price</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Badges</th>
+                                                                <th style={{ padding: "10px 14px", textAlign: "center", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Actions</th>
                                                             </tr>
-                                                        ))}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                        </thead>
+                                                        <tbody>
+                                                            {message.suppliers.map((supplier) => (
+                                                                <tr key={supplier.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                                    <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500" }}>
+                                                                        {supplier.companyName}
+                                                                        {supplier.matchScore && (
+                                                                            <span style={{ display: "block", fontSize: "10px", color: "#22c55e", fontWeight: "400" }}>
+                                                                                {supplier.matchScore}% match
+                                                                            </span>
+                                                                        )}
+                                                                    </td>
+                                                                    <td style={{ padding: "12px 14px", color: t.textSecondary }}>{supplier.city || "—"}</td>
+                                                                    <td style={{ padding: "12px 14px" }}>
+                                                                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                                                            {supplier.productCategories?.slice(0, 2).map((cat, i) => (
+                                                                                <span key={i} style={{
+                                                                                    padding: "2px 8px",
+                                                                                    backgroundColor: darkMode ? "rgba(59,130,246,0.15)" : "#eff6ff",
+                                                                                    color: darkMode ? "#93c5fd" : "#2563eb",
+                                                                                    borderRadius: "8px",
+                                                                                    fontSize: "11px"
+                                                                                }}>{cat}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td style={{ padding: "12px 14px", color: t.textSecondary, whiteSpace: "nowrap" }}>{supplier.moq || "—"}</td>
+                                                                    <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500", whiteSpace: "nowrap" }}>
+                                                                        {supplier.price ? `₹${supplier.price}${supplier.priceUnit ? `/${supplier.priceUnit}` : ""}` : "—"}
+                                                                    </td>
+                                                                    <td style={{ padding: "12px 14px" }}>
+                                                                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                                                            {supplier.badges?.slice(0, 2).map((badge, i) => (
+                                                                                <span key={i} style={{
+                                                                                    padding: "2px 6px",
+                                                                                    backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4",
+                                                                                    color: darkMode ? "#86efac" : "#16a34a",
+                                                                                    borderRadius: "6px",
+                                                                                    fontSize: "10px"
+                                                                                }}>{badge}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </td>
+                                                                    <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                                                                        <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                                                            <button
+                                                                                onClick={async () => {
+                                                                                    const result = await handleViewContact(supplier.id);
+                                                                                    if (result) {
+                                                                                        alert(`📞 Contact: ${result}`);
+                                                                                    }
+                                                                                }}
+                                                                                style={{
+                                                                                    padding: "6px 12px",
+                                                                                    backgroundColor: "#3b82f6",
+                                                                                    color: "white",
+                                                                                    border: "none",
+                                                                                    borderRadius: "6px",
+                                                                                    fontSize: "11px",
+                                                                                    cursor: "pointer",
+                                                                                    fontWeight: "500",
+                                                                                    whiteSpace: "nowrap"
+                                                                                }}
+                                                                            >
+                                                                                📞 Contact
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleSaveSupplier(supplier.id)}
+                                                                                style={{
+                                                                                    padding: "6px 12px",
+                                                                                    backgroundColor: darkMode ? "#334155" : "#f1f5f9",
+                                                                                    color: t.textSecondary,
+                                                                                    border: `1px solid ${t.border}`,
+                                                                                    borderRadius: "6px",
+                                                                                    fontSize: "11px",
+                                                                                    cursor: "pointer",
+                                                                                    fontWeight: "500",
+                                                                                    whiteSpace: "nowrap"
+                                                                                }}
+                                                                            >
+                                                                                ⭐ Save
+                                                                            </button>
+                                                                        </div>
+                                                                    </td>
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -1579,7 +1684,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                 {/* Input */}
                 <div style={{
                     borderTop: `1px solid ${t.border}`,
-                    padding: "14px 20px",
+                    padding: isMobile ? "10px 12px" : "14px 20px",
                     backgroundColor: t.bg,
                     transition: "background-color 0.3s ease"
                 }}>
