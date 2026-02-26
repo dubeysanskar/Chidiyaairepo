@@ -29,17 +29,15 @@ export default function SupplierRegister() {
 
     // Step 3 — Documents
     const [docData, setDocData] = useState({
-        panNumber: "",
+        aadharNumber: "",
         gstNumber: "",
-        iecNumber: "",
         industry: "",
     });
     const [files, setFiles] = useState({
-        panCard: null,
+        aadharCard: null,
         gstCertificate: null,
-        catalog: null,
-        iecCertificate: null,
-        industryLicense: null,
+        industryCertification: null,
+        otherDocument: null,
     });
     const [uploadProgress, setUploadProgress] = useState({});
 
@@ -150,6 +148,7 @@ export default function SupplierRegister() {
                 location: loc,
                 categoryId: catId,
                 categoryDescription,
+                ...(categoryId === "other" && otherCategory ? { productCategories: [otherCategory] } : {}),
             }),
         });
         const data = await res.json();
@@ -161,16 +160,16 @@ export default function SupplierRegister() {
     const handleFinalSubmit = async (e) => {
         e.preventDefault();
 
-        if (!docData.panNumber) {
-            setError("PAN number is required");
+        if (!docData.aadharNumber || docData.aadharNumber.length !== 12) {
+            setError("Valid 12-digit Aadhar number is required");
             return;
         }
-        if (!files.panCard) {
-            setError("PAN card upload is required");
+        if (!files.aadharCard) {
+            setError("Aadhar card upload is required");
             return;
         }
-        if (!docData.gstNumber) {
-            setError("GST number is required");
+        if (!docData.gstNumber || docData.gstNumber.length < 15) {
+            setError("Valid 15-digit GST number is required");
             return;
         }
         if (!files.gstCertificate) {
@@ -207,9 +206,8 @@ export default function SupplierRegister() {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
-                        panNumber: docData.panNumber,
-                        gstNumber: docData.gstNumber || null,
-                        iecNumber: docData.iecNumber || null,
+                        aadharNumber: docData.aadharNumber,
+                        gstNumber: docData.gstNumber,
                         industry: docData.industry || null,
                         documents: uploadedDocs,
                     }),
@@ -345,19 +343,19 @@ export default function SupplierRegister() {
                                 </div>
                             </div>
 
-                            {/* GST Coming Soon Banner */}
+                            {/* GST Required Notice */}
                             <div style={{
-                                padding: "16px 20px", backgroundColor: "#f0f9ff",
-                                border: "1px solid #bae6fd", borderRadius: "12px",
+                                padding: "16px 20px", backgroundColor: "#dcfce7",
+                                border: "1px solid #86efac", borderRadius: "12px",
                                 display: "flex", alignItems: "center", gap: "12px",
                             }}>
                                 <span style={{ fontSize: "24px" }}>🏷️</span>
                                 <div>
-                                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#0c4a6e" }}>
-                                        GST Verification — Coming Soon
+                                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#166534" }}>
+                                        GST Registration Required
                                     </div>
-                                    <div style={{ fontSize: "12px", color: "#0369a1", marginTop: "2px" }}>
-                                        Automatic GSTIN verification and business profile fetching will be available soon.
+                                    <div style={{ fontSize: "12px", color: "#15803d", marginTop: "2px" }}>
+                                        A valid GST number is mandatory for wholesaler registration on ChidiyaAI.
                                     </div>
                                 </div>
                             </div>
@@ -452,27 +450,30 @@ export default function SupplierRegister() {
                         </p>
 
                         <div style={{ display: "flex", flexDirection: "column", gap: "18px" }}>
-                            {/* PAN */}
+                            {/* Aadhar Card */}
                             <div>
-                                <label style={labelStyle}>PAN Number *</label>
-                                <input type="text" value={docData.panNumber}
-                                    onChange={e => setDocData(prev => ({ ...prev, panNumber: e.target.value.toUpperCase() }))}
-                                    placeholder="ABCDE1234F" maxLength={10} style={inputStyle} />
+                                <label style={labelStyle}>Aadhar Number *</label>
+                                <input type="text" value={docData.aadharNumber}
+                                    onChange={e => setDocData(prev => ({ ...prev, aadharNumber: e.target.value.replace(/\D/g, "").slice(0, 12) }))}
+                                    placeholder="XXXX XXXX XXXX" maxLength={12} style={inputStyle} />
+                                <span style={{ fontSize: "11px", color: "#64748b", marginTop: "4px", display: "block" }}>
+                                    12-digit Aadhar number
+                                </span>
                             </div>
                             <div>
-                                <label style={labelStyle}>PAN Card Upload *</label>
-                                <input type="file" accept="image/*,.pdf" onChange={handleFileChange("panCard")}
+                                <label style={labelStyle}>Aadhar Card Upload *</label>
+                                <input type="file" accept="image/*,.pdf" onChange={handleFileChange("aadharCard")}
                                     style={inputStyle} />
-                                {uploadProgress.panCard && (
-                                    <span style={{ fontSize: "12px", color: uploadProgress.panCard === "done" ? "#16a34a" : "#f59e0b" }}>
-                                        {uploadProgress.panCard === "done" ? "✅ Uploaded" : "⏳ Uploading..."}
+                                {uploadProgress.aadharCard && (
+                                    <span style={{ fontSize: "12px", color: uploadProgress.aadharCard === "done" ? "#16a34a" : "#f59e0b" }}>
+                                        {uploadProgress.aadharCard === "done" ? "✅ Uploaded" : "⏳ Uploading..."}
                                     </span>
                                 )}
                             </div>
 
-                            {/* GST */}
+                            {/* GST (Mandatory) */}
                             <div>
-                                <label style={labelStyle}>GST Number *</label>
+                                <label style={labelStyle}>GST Number * <span style={{ color: "#dc2626", fontWeight: "400", fontSize: "11px" }}>(Mandatory for wholesaler registration)</span></label>
                                 <input type="text" value={docData.gstNumber}
                                     onChange={e => setDocData(prev => ({ ...prev, gstNumber: e.target.value.toUpperCase() }))}
                                     placeholder="22AAAAA0000A1Z5" maxLength={15} style={inputStyle} />
@@ -488,48 +489,41 @@ export default function SupplierRegister() {
                                 )}
                             </div>
 
-                            {/* Business Catalog (optional) */}
-                            <div>
-                                <label style={labelStyle}>Business Catalog (optional)</label>
-                                <input type="file" accept="image/*,.pdf" onChange={handleFileChange("catalog")}
-                                    style={inputStyle} />
-                                {uploadProgress.catalog && (
-                                    <span style={{ fontSize: "12px", color: uploadProgress.catalog === "done" ? "#16a34a" : "#f59e0b" }}>
-                                        {uploadProgress.catalog === "done" ? "✅ Uploaded" : "⏳ Uploading..."}
-                                    </span>
-                                )}
-                            </div>
-
-                            {/* IEC (optional) */}
-                            <div>
-                                <label style={labelStyle}>IEC Number (optional — for exporters)</label>
-                                <input type="text" value={docData.iecNumber}
-                                    onChange={e => setDocData(prev => ({ ...prev, iecNumber: e.target.value }))}
-                                    placeholder="IEC number" style={inputStyle} />
-                            </div>
-                            <div>
-                                <label style={labelStyle}>IEC Certificate (optional)</label>
-                                <input type="file" accept="image/*,.pdf" onChange={handleFileChange("iecCertificate")}
-                                    style={inputStyle} />
-                            </div>
-
-                            {/* Industry License (optional) */}
-                            <div>
-                                <label style={labelStyle}>Industry-Specific License (optional)</label>
+                            {/* Industry Certification (optional) */}
+                            <div style={{ padding: "16px", backgroundColor: "#f8fafc", borderRadius: "12px", border: "1px solid #e2e8f0" }}>
+                                <label style={{ ...labelStyle, marginBottom: "12px" }}>Industry Certification (optional)</label>
                                 <select value={docData.industry}
                                     onChange={e => setDocData(prev => ({ ...prev, industry: e.target.value }))}
                                     style={inputStyle}>
                                     <option value="">Select industry (if applicable)</option>
                                     {industryOptions.map(i => <option key={i} value={i}>{i}</option>)}
                                 </select>
+                                {docData.industry && (
+                                    <div style={{ marginTop: "12px" }}>
+                                        <label style={labelStyle}>{docData.industry} Certification</label>
+                                        <input type="file" accept="image/*,.pdf" onChange={handleFileChange("industryCertification")}
+                                            style={inputStyle} />
+                                        {uploadProgress.industryCertification && (
+                                            <span style={{ fontSize: "12px", color: uploadProgress.industryCertification === "done" ? "#16a34a" : "#f59e0b" }}>
+                                                {uploadProgress.industryCertification === "done" ? "✅ Uploaded" : "⏳ Uploading..."}
+                                            </span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
-                            {docData.industry && (
-                                <div>
-                                    <label style={labelStyle}>{docData.industry} License (optional)</label>
-                                    <input type="file" accept="image/*,.pdf" onChange={handleFileChange("industryLicense")}
-                                        style={inputStyle} />
-                                </div>
-                            )}
+
+                            {/* Other Documents (optional) */}
+                            <div>
+                                <label style={labelStyle}>Other Documents (optional)</label>
+                                <p style={{ fontSize: "11px", color: "#64748b", margin: "0 0 8px" }}>Any additional document you'd like to share (trade license, FSSAI, etc.)</p>
+                                <input type="file" accept="image/*,.pdf" onChange={handleFileChange("otherDocument")}
+                                    style={inputStyle} />
+                                {uploadProgress.otherDocument && (
+                                    <span style={{ fontSize: "12px", color: uploadProgress.otherDocument === "done" ? "#16a34a" : "#f59e0b" }}>
+                                        {uploadProgress.otherDocument === "done" ? "✅ Uploaded" : "⏳ Uploading..."}
+                                    </span>
+                                )}
+                            </div>
                         </div>
 
                         {/* Admin Review Notice */}

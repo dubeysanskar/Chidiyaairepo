@@ -3,6 +3,7 @@ import { prisma } from "../../../../lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { sendSupplierWelcomeEmail, sendAdminNewSupplierNotification } from "../../../../lib/email";
+import { sendNewCategoryNotification } from "../../../../lib/email";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fallback-secret-key";
 
@@ -122,6 +123,14 @@ export async function POST(req: Request) {
                         }
                     });
                     console.log("SupplierCategory created (custom/unmapped)");
+
+                    // Notify admins about new category request
+                    sendNewCategoryNotification(
+                        companyName,
+                        email,
+                        productCategories[0]
+                    ).catch(e => console.error("Category notification error:", e));
+                    console.log("New category notification queued");
                 } catch (catError) {
                     console.error("Error creating custom supplier category:", catError);
                 }

@@ -578,6 +578,110 @@ export async function sendCategoryApprovalEmail(
 }
 
 // ============================================
+// SMTP-BASED ADMIN NOTIFICATIONS (uses nodemailer)
+// ============================================
+
+import nodemailer from "nodemailer";
+
+const smtpTransporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST || "smtp.gmail.com",
+    port: parseInt(process.env.SMTP_PORT || "587"),
+    secure: process.env.SMTP_PORT === "465",
+    auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+    },
+});
+
+function getAdminEmailList(): string[] {
+    // Use env var if set, otherwise fall back to hardcoded list
+    if (process.env.ADMIN_EMAILS) {
+        return process.env.ADMIN_EMAILS.split(",").map(e => e.trim()).filter(Boolean);
+    }
+    return ADMIN_EMAILS;
+}
+
+// Send email to all admins via SMTP
+export async function sendSmtpAdminNotification(subject: string, html: string) {
+    const adminEmails = getAdminEmailList();
+    for (const email of adminEmails) {
+        try {
+            await smtpTransporter.sendMail({
+                from: `"ChidiyaAI" <${process.env.SMTP_USER}>`,
+                to: email,
+                subject,
+                html,
+            });
+        } catch (err) {
+            console.error(`Failed to send SMTP admin notification to ${email}:`, err);
+        }
+    }
+}
+
+// Notify admins when a new category is requested
+export async function sendNewCategoryNotification(
+    supplierName: string,
+    supplierEmail: string,
+    categoryName: string
+) {
+    const subject = `🆕 New Category Request: "${categoryName}" — ChidiyaAI`;
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px;">
+            <div style="background: linear-gradient(135deg, #f59e0b, #d97706); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">🆕 New Category Request</h1>
+            </div>
+            <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
+                <p style="font-size: 16px; color: #334155;">A supplier has requested a new product category:</p>
+                <div style="background: #fef3c7; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #f59e0b;">
+                    <p style="margin: 0 0 8px; font-size: 18px; font-weight: bold; color: #92400e;">"${categoryName}"</p>
+                    <p style="margin: 4px 0; color: #334155;"><strong>Supplier:</strong> ${supplierName}</p>
+                    <p style="margin: 4px 0; color: #334155;"><strong>Email:</strong> ${supplierEmail}</p>
+                </div>
+                <p style="font-size: 14px; color: #64748b;">Please review and add this category in the admin panel if appropriate.</p>
+                <div style="text-align: center; margin: 20px 0;">
+                    <a href="${BASE_URL}/admin/categories" style="background: #f59e0b; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">Review in Admin Panel →</a>
+                </div>
+            </div>
+        </div>
+    `;
+    await sendSmtpAdminNotification(subject, html);
+}
+
+// Notify admins when a meeting is scheduled
+export async function sendMeetingRequestNotification(data: {
+    name: string;
+    email: string;
+    phone?: string;
+    date: string;
+    timeSlot: string;
+    topic: string;
+    userType: string;
+}) {
+    const subject = `📅 Meeting Request: ${data.name} — ${data.topic}`;
+    const html = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8fafc; padding: 40px;">
+            <div style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); padding: 30px; border-radius: 16px 16px 0 0; text-align: center;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">📅 New Meeting Request</h1>
+            </div>
+            <div style="background: white; padding: 30px; border-radius: 0 0 16px 16px;">
+                <p style="font-size: 16px; color: #334155;">Someone wants to schedule a meeting with ChidiyaAI:</p>
+                <div style="background: #eff6ff; padding: 20px; border-radius: 12px; margin: 20px 0; border-left: 4px solid #3b82f6;">
+                    <p style="margin: 6px 0; color: #334155;"><strong>Name:</strong> ${data.name}</p>
+                    <p style="margin: 6px 0; color: #334155;"><strong>Email:</strong> ${data.email}</p>
+                    ${data.phone ? `<p style="margin: 6px 0; color: #334155;"><strong>Phone:</strong> ${data.phone}</p>` : ""}
+                    <p style="margin: 6px 0; color: #334155;"><strong>Date:</strong> ${data.date}</p>
+                    <p style="margin: 6px 0; color: #334155;"><strong>Time:</strong> ${data.timeSlot}</p>
+                    <p style="margin: 6px 0; color: #334155;"><strong>Topic:</strong> ${data.topic}</p>
+                    <p style="margin: 6px 0; color: #334155;"><strong>User Type:</strong> ${data.userType}</p>
+                </div>
+                <p style="font-size: 14px; color: #64748b;">Please respond to the user to confirm the meeting.</p>
+            </div>
+        </div>
+    `;
+    await sendSmtpAdminNotification(subject, html);
+}
+
+// ============================================
 // UTILITY FUNCTIONS
 // ============================================
 

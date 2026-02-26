@@ -216,7 +216,7 @@ export default function SupplierProfilesPage() {
                                         { label: "Email", value: selectedSupplier.email },
                                         { label: "Phone", value: selectedSupplier.phone },
                                         { label: "GST Number", value: selectedSupplier.gstNumber },
-                                        { label: "PAN Number", value: selectedSupplier.panNumber },
+                                        { label: "Aadhar Number", value: selectedSupplier.panNumber },
                                         { label: "City", value: selectedSupplier.city },
                                         { label: "State", value: selectedSupplier.state },
                                         { label: "Address", value: selectedSupplier.address },
@@ -338,49 +338,75 @@ export default function SupplierProfilesPage() {
                                     </div>
                                 ) : (
                                     <div className="sp-doc-grid">
-                                        {selectedSupplier.documents.map((doc, i) => (
-                                            <div key={i} className="sp-doc-card">
-                                                <div className="sp-doc-preview">
-                                                    {isImage(doc.fileUrl) ? (
-                                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer" style={{ width: "100%", height: "100%" }}>
-                                                            <img src={doc.fileUrl} alt={doc.fileName || doc.docType}
-                                                                style={{ width: "100%", height: "100%", objectFit: "contain" }}
-                                                                onError={(e) => { e.target.style.display = "none"; }}
+                                        {selectedSupplier.documents.map((doc, i) => {
+                                            // Resolve URL - handle both relative and absolute paths
+                                            const docUrl = doc.fileUrl?.startsWith("http")
+                                                ? doc.fileUrl
+                                                : doc.fileUrl?.startsWith("/")
+                                                    ? doc.fileUrl
+                                                    : `/${doc.fileUrl}`;
+
+                                            return (
+                                                <div key={i} className="sp-doc-card">
+                                                    <div className="sp-doc-preview" style={{ height: isPdf(docUrl) ? "220px" : "140px" }}>
+                                                        {isImage(docUrl) ? (
+                                                            <a href={docUrl} target="_blank" rel="noopener noreferrer" style={{ width: "100%", height: "100%" }}>
+                                                                <img src={docUrl} alt={doc.fileName || doc.docType}
+                                                                    style={{ width: "100%", height: "100%", objectFit: "contain" }}
+                                                                    onError={(e) => {
+                                                                        e.target.style.display = "none";
+                                                                        e.target.parentElement.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:#94a3b8;font-size:13px;">Image failed to load</div>';
+                                                                    }}
+                                                                />
+                                                            </a>
+                                                        ) : isPdf(docUrl) ? (
+                                                            <iframe
+                                                                src={docUrl}
+                                                                style={{ width: "100%", height: "100%", border: "none", borderRadius: "4px" }}
+                                                                title={doc.fileName || doc.docType}
                                                             />
-                                                        </a>
-                                                    ) : isPdf(doc.fileUrl) ? (
-                                                        <a href={doc.fileUrl} target="_blank" rel="noopener noreferrer"
-                                                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-                                                            <div style={{ fontSize: "42px" }}>📄</div>
-                                                            <span style={{ color: "#3b82f6", fontSize: "12px" }}>Click to View PDF</span>
-                                                        </a>
-                                                    ) : (
-                                                        <a href={doc.fileUrl || "#"} target="_blank" rel="noopener noreferrer"
-                                                            style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", textDecoration: "none" }}>
-                                                            <div style={{ fontSize: "42px" }}>📁</div>
-                                                            <span style={{ color: "#94a3b8", fontSize: "12px" }}>View File</span>
-                                                        </a>
-                                                    )}
-                                                    <span style={{
-                                                        position: "absolute", top: "8px", right: "8px",
-                                                        padding: "3px 8px", borderRadius: "10px", fontSize: "10px",
-                                                        fontWeight: "500", textTransform: "uppercase",
-                                                        backgroundColor: doc.status === "verified" ? "#22c55e20" : doc.status === "rejected" ? "#ef444420" : "#f59e0b20",
-                                                        color: doc.status === "verified" ? "#22c55e" : doc.status === "rejected" ? "#ef4444" : "#f59e0b"
-                                                    }}>
-                                                        {doc.status}
-                                                    </span>
-                                                </div>
-                                                <div className="sp-doc-info">
-                                                    <div style={{ color: "white", fontWeight: "500", fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                        {doc.fileName || doc.docType}
+                                                        ) : (
+                                                            <a href={docUrl || "#"} target="_blank" rel="noopener noreferrer"
+                                                                style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "8px", textDecoration: "none" }}>
+                                                                <div style={{ fontSize: "42px" }}>📁</div>
+                                                                <span style={{ color: "#94a3b8", fontSize: "12px" }}>View File</span>
+                                                            </a>
+                                                        )}
+                                                        <span style={{
+                                                            position: "absolute", top: "8px", right: "8px",
+                                                            padding: "3px 8px", borderRadius: "10px", fontSize: "10px",
+                                                            fontWeight: "500", textTransform: "uppercase",
+                                                            backgroundColor: doc.status === "verified" ? "#22c55e20" : doc.status === "rejected" ? "#ef444420" : "#f59e0b20",
+                                                            color: doc.status === "verified" ? "#22c55e" : doc.status === "rejected" ? "#ef4444" : "#f59e0b"
+                                                        }}>
+                                                            {doc.status}
+                                                        </span>
                                                     </div>
-                                                    <div style={{ color: "#64748b", fontSize: "11px", marginTop: "4px", textTransform: "capitalize" }}>
-                                                        {doc.docType?.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                                                    <div className="sp-doc-info" style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                        <div>
+                                                            <div style={{ color: "white", fontWeight: "500", fontSize: "13px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "160px" }}>
+                                                                {doc.fileName || doc.docType}
+                                                            </div>
+                                                            <div style={{ color: "#64748b", fontSize: "11px", marginTop: "4px", textTransform: "capitalize" }}>
+                                                                {doc.docType?.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: "flex", gap: "6px" }}>
+                                                            <a href={docUrl} target="_blank" rel="noopener noreferrer"
+                                                                style={{ padding: "6px 10px", background: "#334155", borderRadius: "6px", color: "#94a3b8", fontSize: "11px", textDecoration: "none", cursor: "pointer" }}
+                                                                title="Open in new tab">
+                                                                🔗 Open
+                                                            </a>
+                                                            <a href={docUrl} download={doc.fileName || doc.docType}
+                                                                style={{ padding: "6px 10px", background: "#334155", borderRadius: "6px", color: "#94a3b8", fontSize: "11px", textDecoration: "none", cursor: "pointer" }}
+                                                                title="Download">
+                                                                ⬇️
+                                                            </a>
+                                                        </div>
                                                     </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>

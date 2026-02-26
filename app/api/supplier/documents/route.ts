@@ -32,26 +32,28 @@ export async function POST(req: Request) {
         const body = await req.json();
         const {
             gstNumber,
-            panNumber,
+            aadharNumber,
+            panNumber, // backward compat
             iecNumber,
             industry,
             documents, // Array of { docType, fileName, fileUrl }
         } = body;
 
         // Validate required fields
-        if (!gstNumber || !panNumber) {
+        const aadhar = aadharNumber || panNumber;
+        if (!gstNumber || !aadhar) {
             return NextResponse.json(
-                { error: "GST number and PAN number are required." },
+                { error: "GST number and Aadhar number are required." },
                 { status: 400 }
             );
         }
 
-        // Update supplier with GST and PAN numbers
+        // Update supplier with GST and Aadhar numbers
         await prisma.supplier.update({
             where: { id: supplierId },
             data: {
                 gstNumber,
-                panNumber,
+                panNumber: aadhar, // Store aadhar in panNumber field for backward compat
                 status: "pending_admin_review",
             },
         });
