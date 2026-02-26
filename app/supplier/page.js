@@ -3,10 +3,12 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
+import ScheduleMeetingModal from "@/app/components/ScheduleMeetingModal";
 
 export default function SupplierLanding() {
     const [isMobile, setIsMobile] = useState(false);
     const [menuOpen, setMenuOpen] = useState(false);
+    const [showMeetingModal, setShowMeetingModal] = useState(false);
 
     useEffect(() => {
         const checkMobile = () => setIsMobile(window.innerWidth < 768);
@@ -44,6 +46,17 @@ export default function SupplierLanding() {
                             <Link href="/supplier/login" style={{ color: "#64748b", textDecoration: "none", fontSize: "14px" }}>
                                 Supplier Login
                             </Link>
+                            <button
+                                onClick={() => setShowMeetingModal(true)}
+                                style={{
+                                    padding: "8px 16px", fontSize: "13px", fontWeight: "500",
+                                    color: "white", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                    border: "none", borderRadius: "8px", cursor: "pointer",
+                                    display: "flex", alignItems: "center", gap: "6px",
+                                }}
+                            >
+                                📅 Schedule Meeting
+                            </button>
                             <Link href="/supplier/register" style={{
                                 backgroundColor: "#0f172a",
                                 color: "white",
@@ -77,6 +90,16 @@ export default function SupplierLanding() {
                         <Link href="/supplier/login" onClick={() => setMenuOpen(false)} style={{ display: "block", padding: "12px", color: "#64748b", textDecoration: "none", textAlign: "center" }}>
                             Supplier Login
                         </Link>
+                        <button
+                            onClick={() => { setShowMeetingModal(true); setMenuOpen(false); }}
+                            style={{
+                                display: "block", width: "100%", padding: "12px", fontSize: "16px",
+                                color: "white", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                border: "none", borderRadius: "8px", cursor: "pointer", textAlign: "center",
+                            }}
+                        >
+                            📅 Schedule Meeting
+                        </button>
                         <Link href="/supplier/register" onClick={() => setMenuOpen(false)} style={{
                             display: "block",
                             backgroundColor: "#0f172a",
@@ -159,6 +182,48 @@ export default function SupplierLanding() {
                 </div>
             </section>
 
+            {/* Need Business Solutions CTA — after hero */}
+            <section style={{
+                padding: isMobile ? "40px 16px" : "60px 24px",
+                background: "linear-gradient(135deg, #eff6ff 0%, #f0fdf4 100%)",
+                textAlign: "center"
+            }}>
+                <div style={{ maxWidth: "700px", margin: "0 auto" }}>
+                    <span style={{ fontSize: "36px", display: "block", marginBottom: "16px" }}>🤝</span>
+                    <h2 style={{ fontSize: isMobile ? "22px" : "28px", fontWeight: "700", color: "#0f172a", marginBottom: "12px" }}>
+                        Need Business Solutions or Assessment?
+                    </h2>
+                    <p style={{ fontSize: isMobile ? "14px" : "16px", color: "#475569", lineHeight: "1.7", marginBottom: "24px" }}>
+                        Whether you need help with packaging supply chain management, want to explore bulk sourcing options, or need guidance on growing your packaging business — our team is here to help.
+                    </p>
+                    <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+                        <button
+                            onClick={() => setShowMeetingModal(true)}
+                            style={{
+                                padding: "14px 28px", fontSize: "15px", fontWeight: "600",
+                                color: "white", background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                border: "none", borderRadius: "10px", cursor: "pointer",
+                                display: "inline-flex", alignItems: "center", gap: "8px",
+                                boxShadow: "0 4px 14px rgba(59,130,246,0.3)",
+                            }}
+                        >
+                            📅 Schedule a Meeting with Us
+                        </button>
+                        <Link href="/contact" style={{
+                            padding: "14px 28px", fontSize: "15px", fontWeight: "500",
+                            color: "#3b82f6", backgroundColor: "white",
+                            border: "1px solid #bfdbfe", borderRadius: "10px",
+                            textDecoration: "none", display: "inline-flex", alignItems: "center", gap: "8px",
+                        }}>
+                            📞 Contact Us
+                        </Link>
+                    </div>
+                    <p style={{ fontSize: "12px", color: "#94a3b8", marginTop: "16px" }}>
+                        Our team responds within 24 hours
+                    </p>
+                </div>
+            </section>
+
             {/* Benefits */}
             <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "white" }}>
                 <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
@@ -194,7 +259,7 @@ export default function SupplierLanding() {
 
                     <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
                         {[
-                            { step: "1", title: "Register & Complete KYC", desc: "Submit company details and verification documents (GST, PAN, IEC if applicable)." },
+                            { step: "1", title: "Register & Complete KYC", desc: "Submit company details and verification documents (GST, Aadhar, certifications)." },
                             { step: "2", title: "Get Verified", desc: "Our team reviews and verifies your documents. Earn trust badges." },
                             { step: "3", title: "Receive Inquiries", desc: "Get AI-validated buyer inquiries matching your products and capacity." },
                             { step: "4", title: "Submit Quotes", desc: "Respond with price, MOQ, delivery timeline. Win the business." }
@@ -232,17 +297,30 @@ export default function SupplierLanding() {
                     <p style={{ color: "#94a3b8", marginBottom: "32px" }}>
                         Join hundreds of verified suppliers on ChidiyaAI
                     </p>
-                    <Link href="/supplier/register" style={{
-                        display: "inline-block",
-                        backgroundColor: "white",
-                        color: "#0f172a",
-                        padding: isMobile ? "14px 28px" : "16px 32px",
-                        borderRadius: "8px",
-                        textDecoration: "none",
-                        fontWeight: "500"
-                    }}>
-                        Become a Supplier
-                    </Link>
+                    <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexWrap: "wrap" }}>
+                        <Link href="/supplier/register" style={{
+                            display: "inline-block",
+                            backgroundColor: "white",
+                            color: "#0f172a",
+                            padding: isMobile ? "14px 28px" : "16px 32px",
+                            borderRadius: "8px",
+                            textDecoration: "none",
+                            fontWeight: "500"
+                        }}>
+                            Become a Supplier
+                        </Link>
+                        <button
+                            onClick={() => setShowMeetingModal(true)}
+                            style={{
+                                padding: isMobile ? "14px 28px" : "16px 32px",
+                                background: "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                color: "white", border: "none", borderRadius: "8px",
+                                fontWeight: "500", cursor: "pointer", fontSize: "16px",
+                            }}
+                        >
+                            📅 Schedule a Meeting
+                        </button>
+                    </div>
                 </div>
             </section>
 
@@ -250,6 +328,12 @@ export default function SupplierLanding() {
             <footer style={{ padding: "40px 24px", backgroundColor: "#0f172a", borderTop: "1px solid #1e293b", textAlign: "center" }}>
                 <p style={{ color: "#64748b", fontSize: "14px" }}>© 2025 ChidiyaAI. All rights reserved.</p>
             </footer>
+
+            {/* Schedule Meeting Modal */}
+            <ScheduleMeetingModal
+                isOpen={showMeetingModal}
+                onClose={() => setShowMeetingModal(false)}
+            />
         </div>
     );
 }

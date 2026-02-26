@@ -339,12 +339,20 @@ export default function SupplierProfilesPage() {
                                 ) : (
                                     <div className="sp-doc-grid">
                                         {selectedSupplier.documents.map((doc, i) => {
-                                            // Resolve URL - handle both relative and absolute paths
-                                            const docUrl = doc.fileUrl?.startsWith("http")
-                                                ? doc.fileUrl
-                                                : doc.fileUrl?.startsWith("/")
-                                                    ? doc.fileUrl
-                                                    : `/${doc.fileUrl}`;
+                                            // Resolve URL - handle both old (/uploads/) and new (/api/uploads/) paths
+                                            let docUrl = doc.fileUrl || "";
+                                            if (docUrl.startsWith("http")) {
+                                                // absolute URL, keep as is
+                                            } else if (docUrl.startsWith("/uploads/")) {
+                                                // Old format — rewrite to API route
+                                                docUrl = "/api" + docUrl;
+                                            } else if (docUrl.startsWith("/api/uploads/")) {
+                                                // New format — already correct
+                                            } else if (docUrl.startsWith("/")) {
+                                                docUrl = docUrl;
+                                            } else {
+                                                docUrl = "/api/uploads/" + docUrl;
+                                            }
 
                                             return (
                                                 <div key={i} className="sp-doc-card">
