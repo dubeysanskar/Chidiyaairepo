@@ -109,6 +109,15 @@ function ChatContent() {
     const [filteredLocations, setFilteredLocations] = useState(allLocations.slice(0, 8));
     const [showGSTCalculator, setShowGSTCalculator] = useState(false);
     const [showHelperGuide, setShowHelperGuide] = useState(false);
+    const [helperGuideKey, setHelperGuideKey] = useState(0);
+
+    // Sidebar search
+    const [historySearchQuery, setHistorySearchQuery] = useState("");
+
+    // Supplier results drawer
+    const [showSupplierDrawer, setShowSupplierDrawer] = useState(false);
+    const [drawerSuppliers, setDrawerSuppliers] = useState<Supplier[]>([]);
+    const [selectedSupplierDetail, setSelectedSupplierDetail] = useState<Supplier | null>(null);
 
     // Chat history state
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
@@ -489,7 +498,7 @@ function ChatContent() {
                     category: reqs.category,
                     quantity: reqs.quantity,
                     budget: reqs.budget,
-                    title: reqs.category ? reqs.category.substring(0, 30) : "New Search",
+                    title: reqs.category ? reqs.category.substring(0, 30) : null,
                 }),
             });
             const sessionData = await sessionRes.json();
@@ -651,6 +660,11 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                 };
                 setMessages((prev) => [...prev, aiMsg]);
 
+                // Auto-open supplier drawer when results arrive
+                if (data.suppliers && data.suppliers.length > 0) {
+                    setDrawerSuppliers(data.suppliers);
+                    setShowSupplierDrawer(true);
+                }
                 // Save assistant message to DB
                 if (currentSessionId) {
                     fetch("/api/buyer/chat-session", {
@@ -1104,13 +1118,38 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
 
                 {/* Session List */}
                 <div style={{ flex: 1, overflowY: "auto", padding: "8px" }}>
+                    {/* Sidebar Search */}
+                    <div style={{ padding: "0 4px 8px" }}>
+                        <input
+                            type="text"
+                            value={historySearchQuery}
+                            onChange={(e) => setHistorySearchQuery(e.target.value)}
+                            placeholder="🔍 Search chats..."
+                            style={{
+                                width: "100%",
+                                padding: "8px 12px",
+                                border: `1px solid ${t.border}`,
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                outline: "none",
+                                backgroundColor: t.inputBg,
+                                color: t.text,
+                                boxSizing: "border-box"
+                            }}
+                        />
+                    </div>
                     {chatHistory.length === 0 ? (
                         <div style={{ padding: "16px", textAlign: "center" }}>
                             <p style={{ color: t.textMuted, fontSize: "12px" }}>No chat history yet</p>
                         </div>
                     ) : (
-                        groupOrder.map(group =>
-                            groupedHistory[group] && groupedHistory[group].length > 0 && (
+                        groupOrder.map(group => {
+                            const filteredItems = (groupedHistory[group] || []).filter((item: ChatHistoryItem) =>
+                                !historySearchQuery.trim() ||
+                                (item.title || item.category || "").toLowerCase().includes(historySearchQuery.toLowerCase())
+                            );
+                            if (filteredItems.length === 0) return null;
+                            return (
                                 <div key={group} style={{ marginBottom: "16px" }}>
                                     <p style={{
                                         padding: "8px 12px",
@@ -1123,7 +1162,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                     }}>
                                         {group}
                                     </p>
-                                    {groupedHistory[group].map(item => (
+                                    {filteredItems.map((item: ChatHistoryItem) => (
                                         <div
                                             key={item.id}
                                             style={{
@@ -1181,8 +1220,8 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                         </div>
                                     ))}
                                 </div>
-                            )
-                        )
+                            );
+                        })
                     )}
                 </div>
 
@@ -1391,7 +1430,10 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     <div style={{ display: "flex", gap: isMobile ? "8px" : "16px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
                         <button
-                            onClick={() => setShowHelperGuide(!showHelperGuide)}
+                            onClick={() => {
+                                setShowHelperGuide(!showHelperGuide);
+                                setHelperGuideKey(prev => prev + 1);
+                            }}
                             style={{
                                 display: "flex", alignItems: "center", gap: "6px",
                                 padding: isMobile ? "8px" : "8px 14px",
@@ -1408,6 +1450,13 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                             <Image src="/favicon-32x32.png" alt="" width={16} height={16} style={{ borderRadius: "50%" }} />
                             {!isMobile && (showHelperGuide ? "Close Guide" : "Helper Guide")}
                         </button>
+                        {isMobile && (
+                            <Link href="/account/dashboard" style={{
+                                color: t.textSecondary, textDecoration: "none", fontSize: "12px",
+                                padding: "6px 10px", borderRadius: "6px",
+                                backgroundColor: darkMode ? "#334155" : "#f1f5f9"
+                            }}>Dashboard</Link>
+                        )}
                         {!isMobile && (
                             <>
                                 <Link href="/" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Home</Link>
@@ -1835,7 +1884,234 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             <GSTCalculator isOpen={showGSTCalculator} onClose={() => setShowGSTCalculator(false)} />
 
             {/* Helper Guide Widget */}
-            {showHelperGuide && <GlobalChatWidget />}
+            {showHelperGuide && <GlobalChatWidget key={helperGuideKey} />}
+
+            {/* ============ SUPPLIER RESULTS DRAWER ============ */}
+            {showSupplierDrawer && (
+                <>
+                    {/* Backdrop */}
+                    <div
+                        onClick={() => { setShowSupplierDrawer(false); setSelectedSupplierDetail(null); }}
+                        style={{
+                            position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+                            backgroundColor: "rgba(0,0,0,0.4)",
+                            zIndex: 1001,
+                        }}
+                    />
+                    {/* Drawer Panel */}
+                    <div style={{
+                        position: "fixed",
+                        ...(isMobile ? {
+                            bottom: 0, left: 0, right: 0,
+                            height: "75vh",
+                            borderRadius: "16px 16px 0 0",
+                        } : {
+                            top: 0, right: 0, bottom: 0,
+                            width: "480px",
+                            borderRadius: "0",
+                        }),
+                        backgroundColor: darkMode ? "#1e293b" : "#ffffff",
+                        zIndex: 1002,
+                        display: "flex",
+                        flexDirection: "column",
+                        boxShadow: "-4px 0 30px rgba(0,0,0,0.2)",
+                        overflow: "hidden",
+                    }}>
+                        {/* Drawer Header */}
+                        <div style={{
+                            padding: "14px 20px",
+                            borderBottom: `1px solid ${t.border}`,
+                            display: "flex", justifyContent: "space-between", alignItems: "center",
+                            background: darkMode ? "#0f172a" : "#f8fafc",
+                        }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: "16px", fontWeight: "700", color: t.text }}>
+                                    {selectedSupplierDetail ? "📋 Supplier Details" : `🎯 ${drawerSuppliers.length} Matching Suppliers`}
+                                </h3>
+                                {!selectedSupplierDetail && (
+                                    <p style={{ margin: "2px 0 0", fontSize: "11px", color: t.textMuted }}>Sorted by AI match score</p>
+                                )}
+                            </div>
+                            <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                {selectedSupplierDetail && (
+                                    <button
+                                        onClick={() => setSelectedSupplierDetail(null)}
+                                        style={{ background: "none", border: "none", color: t.textSecondary, cursor: "pointer", fontSize: "13px", padding: "6px 10px", borderRadius: "6px", backgroundColor: darkMode ? "#334155" : "#f1f5f9" }}
+                                    >← Back</button>
+                                )}
+                                <button
+                                    onClick={() => { setShowSupplierDrawer(false); setSelectedSupplierDetail(null); }}
+                                    style={{ background: "none", border: "none", color: t.textSecondary, cursor: "pointer", fontSize: "20px", padding: "4px 8px" }}
+                                >✕</button>
+                            </div>
+                        </div>
+
+                        {/* Drawer Body */}
+                        <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+                            {selectedSupplierDetail ? (
+                                /* ── Supplier Detail View ── */
+                                <div>
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <h2 style={{ margin: "0 0 4px", fontSize: "20px", fontWeight: "700", color: t.text }}>
+                                            {selectedSupplierDetail.companyName}
+                                        </h2>
+                                        <p style={{ margin: 0, fontSize: "13px", color: t.textSecondary }}>📍 {selectedSupplierDetail.city || "India"}</p>
+                                    </div>
+
+                                    {/* Badges */}
+                                    {selectedSupplierDetail.badges && selectedSupplierDetail.badges.length > 0 && (
+                                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap", marginBottom: "16px" }}>
+                                            {selectedSupplierDetail.badges.map((badge, i) => (
+                                                <span key={i} style={{
+                                                    padding: "4px 10px",
+                                                    backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4",
+                                                    color: darkMode ? "#86efac" : "#16a34a",
+                                                    borderRadius: "8px", fontSize: "12px", fontWeight: "500"
+                                                }}>{badge}</span>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Match Score */}
+                                    {selectedSupplierDetail.matchScore && (
+                                        <div style={{
+                                            padding: "12px 16px", borderRadius: "10px", marginBottom: "16px",
+                                            background: darkMode ? "linear-gradient(135deg, rgba(34,197,94,0.1), rgba(59,130,246,0.1))" : "linear-gradient(135deg, #f0fdf4, #eff6ff)",
+                                            border: `1px solid ${darkMode ? "rgba(34,197,94,0.2)" : "#bbf7d0"}`
+                                        }}>
+                                            <p style={{ margin: 0, fontSize: "13px", color: t.textSecondary }}>AI Match Score</p>
+                                            <p style={{ margin: "4px 0 0", fontSize: "24px", fontWeight: "700", color: "#22c55e" }}>{selectedSupplierDetail.matchScore}%</p>
+                                        </div>
+                                    )}
+
+                                    {/* Key Info */}
+                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "16px" }}>
+                                        <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: darkMode ? "#0f172a" : "#f8fafc", border: `1px solid ${t.border}` }}>
+                                            <p style={{ margin: 0, fontSize: "11px", color: t.textMuted }}>Price</p>
+                                            <p style={{ margin: "4px 0 0", fontSize: "15px", fontWeight: "600", color: t.text }}>
+                                                {selectedSupplierDetail.price ? `₹${selectedSupplierDetail.price}${selectedSupplierDetail.priceUnit ? `/${selectedSupplierDetail.priceUnit}` : ""}` : "Contact"}
+                                            </p>
+                                        </div>
+                                        <div style={{ padding: "12px", borderRadius: "10px", backgroundColor: darkMode ? "#0f172a" : "#f8fafc", border: `1px solid ${t.border}` }}>
+                                            <p style={{ margin: 0, fontSize: "11px", color: t.textMuted }}>MOQ</p>
+                                            <p style={{ margin: "4px 0 0", fontSize: "15px", fontWeight: "600", color: t.text }}>
+                                                {selectedSupplierDetail.moq || "Contact"}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {/* Categories */}
+                                    <div style={{ marginBottom: "16px" }}>
+                                        <p style={{ margin: "0 0 8px", fontSize: "12px", fontWeight: "600", color: t.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>Product Categories</p>
+                                        <div style={{ display: "flex", gap: "6px", flexWrap: "wrap" }}>
+                                            {selectedSupplierDetail.productCategories?.map((cat, i) => (
+                                                <span key={i} style={{
+                                                    padding: "4px 10px",
+                                                    backgroundColor: darkMode ? "rgba(59,130,246,0.15)" : "#eff6ff",
+                                                    color: darkMode ? "#93c5fd" : "#2563eb",
+                                                    borderRadius: "8px", fontSize: "12px"
+                                                }}>{cat}</span>
+                                            ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Description */}
+                                    {selectedSupplierDetail.description && (
+                                        <div style={{ marginBottom: "16px" }}>
+                                            <p style={{ margin: "0 0 6px", fontSize: "12px", fontWeight: "600", color: t.textSecondary, textTransform: "uppercase", letterSpacing: "0.05em" }}>About</p>
+                                            <p style={{ margin: 0, fontSize: "13px", lineHeight: "1.6", color: t.text }}>{selectedSupplierDetail.description}</p>
+                                        </div>
+                                    )}
+
+                                    {/* Contact Button */}
+                                    <button
+                                        onClick={async () => {
+                                            const result = await handleViewContact(selectedSupplierDetail.id);
+                                            if (result) { alert(`📞 ${selectedSupplierDetail.companyName}\nPhone: ${result}`); }
+                                        }}
+                                        style={{
+                                            width: "100%", padding: "14px",
+                                            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                                            color: "white", border: "none", borderRadius: "12px",
+                                            fontSize: "15px", fontWeight: "600", cursor: "pointer",
+                                            marginBottom: "10px"
+                                        }}
+                                    >📞 Contact {selectedSupplierDetail.companyName}</button>
+                                    <button
+                                        onClick={() => handleSaveSupplier(selectedSupplierDetail.id)}
+                                        style={{
+                                            width: "100%", padding: "12px",
+                                            backgroundColor: darkMode ? "#334155" : "#f1f5f9",
+                                            color: t.textSecondary,
+                                            border: `1px solid ${t.border}`, borderRadius: "12px",
+                                            fontSize: "14px", fontWeight: "600", cursor: "pointer",
+                                        }}
+                                    >⭐ Save Supplier</button>
+                                </div>
+                            ) : (
+                                /* ── Supplier List (Compact Table) ── */
+                                <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+                                    {drawerSuppliers.map((supplier) => (
+                                        <div key={supplier.id} style={{
+                                            display: "flex", alignItems: "center", gap: "12px",
+                                            padding: "12px", borderRadius: "10px",
+                                            border: `1px solid ${t.border}`,
+                                            backgroundColor: darkMode ? "#0f172a" : "#ffffff",
+                                            cursor: "pointer",
+                                        }}
+                                            onClick={() => setSelectedSupplierDetail(supplier)}
+                                        >
+                                            {/* Match Score Badge */}
+                                            <div style={{
+                                                width: "44px", height: "44px", borderRadius: "10px",
+                                                background: supplier.matchScore && supplier.matchScore >= 70
+                                                    ? "linear-gradient(135deg, #22c55e, #16a34a)"
+                                                    : supplier.matchScore && supplier.matchScore >= 40
+                                                        ? "linear-gradient(135deg, #eab308, #ca8a04)"
+                                                        : "linear-gradient(135deg, #94a3b8, #64748b)",
+                                                display: "flex", alignItems: "center", justifyContent: "center",
+                                                color: "white", fontSize: "13px", fontWeight: "700",
+                                                flexShrink: 0
+                                            }}>
+                                                {supplier.matchScore || "—"}%
+                                            </div>
+                                            {/* Info */}
+                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                <p style={{ margin: 0, fontSize: "14px", fontWeight: "600", color: t.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                                    {supplier.companyName}
+                                                </p>
+                                                <p style={{ margin: "2px 0 0", fontSize: "11px", color: t.textSecondary }}>
+                                                    📍 {supplier.city || "India"} · MOQ: {supplier.moq || "—"} · {supplier.price ? `₹${supplier.price}` : "Contact"}
+                                                </p>
+                                                <div style={{ display: "flex", gap: "4px", marginTop: "4px", flexWrap: "wrap" }}>
+                                                    {supplier.badges?.slice(0, 2).map((b, i) => (
+                                                        <span key={i} style={{ padding: "1px 6px", backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4", color: darkMode ? "#86efac" : "#16a34a", borderRadius: "4px", fontSize: "9px" }}>{b}</span>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                            {/* Action Buttons */}
+                                            <div style={{ display: "flex", flexDirection: "column", gap: "4px", flexShrink: 0 }}>
+                                                <button
+                                                    onClick={async (e) => {
+                                                        e.stopPropagation();
+                                                        const result = await handleViewContact(supplier.id);
+                                                        if (result) { alert(`📞 Contact: ${result}`); }
+                                                    }}
+                                                    style={{ padding: "5px 10px", backgroundColor: "#3b82f6", color: "white", border: "none", borderRadius: "6px", fontSize: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap" }}
+                                                >📞 Contact</button>
+                                                <button
+                                                    onClick={(e) => { e.stopPropagation(); setSelectedSupplierDetail(supplier); }}
+                                                    style={{ padding: "5px 10px", backgroundColor: darkMode ? "#334155" : "#f1f5f9", color: t.textSecondary, border: `1px solid ${t.border}`, borderRadius: "6px", fontSize: "10px", cursor: "pointer", fontWeight: "600", whiteSpace: "nowrap" }}
+                                                >👁 Details</button>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                </>
+            )}
 
 
             <style jsx global>{`

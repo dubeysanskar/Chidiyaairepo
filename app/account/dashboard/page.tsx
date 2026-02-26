@@ -56,6 +56,7 @@ export default function BuyerDashboard() {
     const [recentActivity, setRecentActivity] = useState<Activity[]>([]);
     const [loading, setLoading] = useState(true);
     const [activeTab, setActiveTab] = useState<"inquiries" | "saved" | "history">("inquiries");
+    const [dashboardSearch, setDashboardSearch] = useState("");
     const [profile, setProfile] = useState<UserProfile | null>(null);
 
     useEffect(() => {
@@ -260,75 +261,98 @@ export default function BuyerDashboard() {
                                     </div>
                                 ) : (
                                     <div style={{ display: "grid", gap: "16px" }}>
-                                        {chatSessions.map(session => (
-                                            <div key={session.id} style={{
-                                                backgroundColor: "white",
-                                                borderRadius: "12px",
+                                        {/* Search Input */}
+                                        <input
+                                            type="text"
+                                            value={dashboardSearch}
+                                            onChange={(e) => setDashboardSearch(e.target.value)}
+                                            placeholder="🔍 Search your chats..."
+                                            style={{
+                                                width: "100%",
+                                                padding: "10px 16px",
                                                 border: "1px solid #e2e8f0",
-                                                padding: "20px",
-                                                display: "flex",
-                                                justifyContent: "space-between",
-                                                alignItems: "center"
-                                            }}>
-                                                <div>
-                                                    <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: "600", color: "#0f172a" }}>
-                                                        {session.title || session.category || "Search"}
-                                                    </p>
-                                                    <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
-                                                        {session.category && (
-                                                            <span style={{
-                                                                padding: "4px 10px",
-                                                                backgroundColor: "#dcfce7",
-                                                                color: "#15803d",
-                                                                borderRadius: "12px",
-                                                                fontSize: "12px"
-                                                            }}>📦 {session.category}</span>
-                                                        )}
-                                                        {session.location && (
-                                                            <span style={{
-                                                                padding: "4px 10px",
-                                                                backgroundColor: "#dbeafe",
-                                                                color: "#1d4ed8",
-                                                                borderRadius: "12px",
-                                                                fontSize: "12px"
-                                                            }}>📍 {session.location}</span>
-                                                        )}
-                                                        {session.budget && (
-                                                            <span style={{
-                                                                padding: "4px 10px",
-                                                                backgroundColor: "#fef3c7",
-                                                                color: "#b45309",
-                                                                borderRadius: "12px",
-                                                                fontSize: "12px"
-                                                            }}>💰 {session.budget}</span>
-                                                        )}
+                                                borderRadius: "10px",
+                                                fontSize: "14px",
+                                                outline: "none",
+                                                backgroundColor: "white",
+                                                color: "#0f172a",
+                                                boxSizing: "border-box"
+                                            }}
+                                        />
+                                        {chatSessions
+                                            .filter(session =>
+                                                !dashboardSearch.trim() ||
+                                                (session.title || session.category || "").toLowerCase().includes(dashboardSearch.toLowerCase())
+                                            )
+                                            .map(session => (
+                                                <div key={session.id} style={{
+                                                    backgroundColor: "white",
+                                                    borderRadius: "12px",
+                                                    border: "1px solid #e2e8f0",
+                                                    padding: "20px",
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    alignItems: "center"
+                                                }}>
+                                                    <div>
+                                                        <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: "600", color: "#0f172a" }}>
+                                                            {session.title || session.category || "Search"}
+                                                        </p>
+                                                        <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
+                                                            {session.category && (
+                                                                <span style={{
+                                                                    padding: "4px 10px",
+                                                                    backgroundColor: "#dcfce7",
+                                                                    color: "#15803d",
+                                                                    borderRadius: "12px",
+                                                                    fontSize: "12px"
+                                                                }}>📦 {session.category}</span>
+                                                            )}
+                                                            {session.location && (
+                                                                <span style={{
+                                                                    padding: "4px 10px",
+                                                                    backgroundColor: "#dbeafe",
+                                                                    color: "#1d4ed8",
+                                                                    borderRadius: "12px",
+                                                                    fontSize: "12px"
+                                                                }}>📍 {session.location}</span>
+                                                            )}
+                                                            {session.budget && (
+                                                                <span style={{
+                                                                    padding: "4px 10px",
+                                                                    backgroundColor: "#fef3c7",
+                                                                    color: "#b45309",
+                                                                    borderRadius: "12px",
+                                                                    fontSize: "12px"
+                                                                }}>💰 {session.budget}</span>
+                                                            )}
+                                                        </div>
+                                                        <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
+                                                            {formatDate(session.createdAt)}
+                                                            {session.lastMessage && ` • "${session.lastMessage}..."`}
+                                                        </p>
                                                     </div>
-                                                    <p style={{ margin: 0, fontSize: "13px", color: "#64748b" }}>
-                                                        {formatDate(session.createdAt)}
-                                                        {session.lastMessage && ` • "${session.lastMessage}..."`}
-                                                    </p>
+                                                    <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                                                        <Link
+                                                            href={`/account/chat?session=${session.id}`}
+                                                            style={{
+                                                                padding: "8px 14px",
+                                                                backgroundColor: "#0f172a",
+                                                                color: "white",
+                                                                borderRadius: "8px",
+                                                                fontSize: "12px",
+                                                                fontWeight: "500",
+                                                                textDecoration: "none",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: "4px"
+                                                            }}
+                                                        >
+                                                            💬 Continue
+                                                        </Link>
+                                                    </div>
                                                 </div>
-                                                <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-                                                    <Link
-                                                        href={`/account/chat?session=${session.id}`}
-                                                        style={{
-                                                            padding: "8px 14px",
-                                                            backgroundColor: "#0f172a",
-                                                            color: "white",
-                                                            borderRadius: "8px",
-                                                            fontSize: "12px",
-                                                            fontWeight: "500",
-                                                            textDecoration: "none",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: "4px"
-                                                        }}
-                                                    >
-                                                        💬 Continue
-                                                    </Link>
-                                                </div>
-                                            </div>
-                                        ))}
+                                            ))}
                                     </div>
                                 )}
                             </div>

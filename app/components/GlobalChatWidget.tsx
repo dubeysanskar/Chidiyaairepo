@@ -154,6 +154,10 @@ export default function GlobalChatWidget() {
     const handleOpen = () => {
         setIsOpen(true);
         setShowPopup(false);
+        // Always reset to category selection screen when opening
+        setShowCategorySelect(true);
+        setSelectedCategory(null);
+        setMessages([]);
     };
 
     const handleBackToCategories = () => {

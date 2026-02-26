@@ -25,7 +25,14 @@ export async function GET(req: Request) {
         const supplier = await prisma.supplier.findUnique({
             where: { id: supplierId },
             include: {
-                inquiries: true,
+                inquiries: {
+                    include: {
+                        buyer: {
+                            select: { name: true, email: true, phone: true },
+                        },
+                    },
+                    orderBy: { createdAt: "desc" },
+                },
                 quotes: true,
                 documents: true,
                 products: {
@@ -51,12 +58,15 @@ export async function GET(req: Request) {
             }, { status: 403 });
         }
 
+        // Count unique buyers who contacted this supplier
+        const uniqueBuyerIds = new Set(supplier.inquiries.map(i => i.buyerId));
+
         // Calculate aggregated stats
         const stats = {
             totalInquiries: supplier.inquiries.length,
+            gainedBuyers: uniqueBuyerIds.size,
             quotesSubmitted: supplier.quotes.length,
             acceptedDeals: supplier.quotes.filter((q: { status: string }) => q.status === "accepted").length,
-            // Mock conversion rate logic
             conversionRate: supplier.quotes.length > 0
                 ? Math.round((supplier.quotes.filter((q: { status: string }) => q.status === "accepted").length / supplier.quotes.length) * 100)
                 : 0,
@@ -64,10 +74,25 @@ export async function GET(req: Request) {
             leadAcceptRate: 75 // Mock
         };
 
+        // Format inquiries with buyer details
+        const formattedInquiries = supplier.inquiries.map(inq => ({
+            id: inq.id,
+            product: inq.product,
+            quantity: inq.quantity,
+            description: inq.description,
+            status: inq.status,
+            createdAt: inq.createdAt,
+            buyer: inq.buyer ? {
+                name: inq.buyer.name,
+                email: inq.buyer.email,
+                phone: inq.buyer.phone,
+            } : null,
+        }));
+
         return NextResponse.json({
             supplier,
             stats,
-            inquiries: supplier.inquiries, // Or filter active ones
+            inquiries: formattedInquiries,
             quotes: supplier.quotes,
             products: supplier.products || []
         });
