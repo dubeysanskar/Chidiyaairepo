@@ -4,9 +4,8 @@ import { useState, useEffect, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import SupplierCard from "@/app/components/SupplierCard";
-import GSTCalculator, { GSTCalculatorButton } from "@/app/components/GSTCalculator";
 import GlobalChatWidget from "@/app/components/GlobalChatWidget";
+import GSTCalculator, { GSTCalculatorButton } from "@/app/components/GSTCalculator";
 
 interface Supplier {
     id: string;
@@ -71,6 +70,7 @@ const budgets = ["Under ₹50,000", "₹50,000 - ₹1 Lakh", "₹1 Lakh - ₹5 L
 
 interface ChatHistoryItem {
     id: string;
+    title: string;
     category: string;
     location: string;
     messages: Message[];
@@ -108,6 +108,7 @@ function ChatContent() {
     const [searchQuery, setSearchQuery] = useState("");
     const [filteredLocations, setFilteredLocations] = useState(allLocations.slice(0, 8));
     const [showGSTCalculator, setShowGSTCalculator] = useState(false);
+    const [showHelperGuide, setShowHelperGuide] = useState(false);
 
     // Chat history state
     const [chatHistory, setChatHistory] = useState<ChatHistoryItem[]>([]);
@@ -128,7 +129,7 @@ function ChatContent() {
         searchesUsed: number; searchLimit: number;
         contactsUsed: number; contactLimit: number;
         isPro: boolean; proExpiry: string | null;
-    }>({ searchesUsed: 0, searchLimit: 3, contactsUsed: 0, contactLimit: 5, isPro: false, proExpiry: null });
+    }>({ searchesUsed: 0, searchLimit: 5, contactsUsed: 0, contactLimit: 5, isPro: false, proExpiry: null });
 
     // Load dark mode preference from localStorage
     useEffect(() => {
@@ -178,88 +179,119 @@ function ChatContent() {
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const [subLoading, setSubLoading] = useState(false);
 
-    // Load chat history from localStorage on mount
-    useEffect(() => {
+    // Load chat history from database on mount
+    const fetchChatHistory = async () => {
         try {
-            const saved = localStorage.getItem("chidiyaai_chat_history");
-            if (saved) setChatHistory(JSON.parse(saved));
-        } catch { /* ignore */ }
-    }, []);
-
-    // Save current chat to history
-    const saveChatToHistory = (msgs: Message[], reqs: UserRequirements) => {
-        if (msgs.length < 2) return; // Don't save chats with less than 2 messages
-        try {
-            const saved = localStorage.getItem("chidiyaai_chat_history");
-            const history: ChatHistoryItem[] = saved ? JSON.parse(saved) : [];
-            const sessionId = currentSessionId || `chat_${Date.now()}`;
-
-            // Find first user message for label
-            const firstUserMsg = msgs.find(m => m.role === "user")?.content || "Chat";
-
-            const existing = history.findIndex(h => h.id === sessionId);
-            const item: ChatHistoryItem = {
-                id: sessionId,
-                category: reqs.category || firstUserMsg.slice(0, 40),
-                location: reqs.location || "",
-                messages: msgs.map(m => ({ ...m })), // Keep suppliers for history
-                requirements: reqs,
-                updatedAt: new Date().toISOString(),
-            };
-
-            if (existing >= 0) {
-                history[existing] = item;
-            } else {
-                history.unshift(item);
+            const res = await fetch("/api/buyer/chat-history");
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.sessions) {
+                    setChatHistory(data.sessions.map((s: { id: string; title?: string; category?: string; location?: string; updatedAt: string }) => ({
+                        id: s.id,
+                        category: s.title || s.category || "Chat",
+                        location: s.location || "",
+                        messages: [],
+                        requirements: { location: s.location || "", category: s.category || "", quantity: "", budget: "" },
+                        updatedAt: s.updatedAt,
+                    })));
+                }
             }
-
-            // Keep only last 20 chats
-            const trimmed = history.slice(0, 20);
-            localStorage.setItem("chidiyaai_chat_history", JSON.stringify(trimmed));
-            setChatHistory(trimmed);
-            if (!currentSessionId) setCurrentSessionId(sessionId);
-        } catch { /* ignore storage errors */ }
+        } catch { /* ignore fetch errors */ }
     };
 
-    const loadChatFromHistory = (item: ChatHistoryItem) => {
-        setMessages(item.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
-        setRequirements(item.requirements);
+    useEffect(() => {
+        if (user) fetchChatHistory();
+    }, [user]);
+
+    // Save messages to database via API
+    const saveChatToHistory = async (msgs: Message[], reqs: UserRequirements) => {
+        if (msgs.length < 2 || !currentSessionId) return;
+        try {
+            // Find the latest user and assistant messages to save
+            const lastUser = [...msgs].reverse().find(m => m.role === "user");
+            const lastAssistant = [...msgs].reverse().find(m => m.role === "assistant");
+
+            await fetch("/api/buyer/chat-session", {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    sessionId: currentSessionId,
+                    userMessage: lastUser?.content,
+                    assistantMessage: lastAssistant?.content,
+                    suppliers: lastAssistant?.suppliers,
+                }),
+            });
+
+            // Refresh history sidebar
+            fetchChatHistory();
+        } catch { /* ignore save errors */ }
+    };
+
+    const loadChatFromHistory = async (item: ChatHistoryItem) => {
         setCurrentSessionId(item.id);
         setShowQuestionnaire(false);
         setChatComplete(false);
         setShowHistoryDropdown(false);
+
+        // Load full session messages from DB
+        try {
+            const res = await fetch(`/api/buyer/chat-session?sessionId=${item.id}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.success && data.session) {
+                    const loadedMsgs = data.session.messages.map((m: { role: string; content: string; createdAt: string }, i: number) => ({
+                        id: i + 1,
+                        role: m.role as "user" | "assistant",
+                        content: m.content,
+                        timestamp: new Date(m.createdAt),
+                    }));
+                    setMessages(loadedMsgs);
+                    setRequirements({
+                        location: data.session.location || "",
+                        category: data.session.category || "",
+                        quantity: data.session.quantity || "",
+                        budget: data.session.budget || "",
+                    });
+                }
+            }
+        } catch {
+            // Fallback to item messages if API fails
+            if (item.messages.length > 0) {
+                setMessages(item.messages.map(m => ({ ...m, timestamp: new Date(m.timestamp) })));
+                setRequirements(item.requirements);
+            }
+        }
     };
 
-    const deleteChatFromHistory = (id: string) => {
+    const deleteChatFromHistory = async (id: string) => {
         try {
-            const saved = localStorage.getItem("chidiyaai_chat_history");
-            const history: ChatHistoryItem[] = saved ? JSON.parse(saved) : [];
-            const updated = history.filter(h => h.id !== id);
-            localStorage.setItem("chidiyaai_chat_history", JSON.stringify(updated));
-            setChatHistory(updated);
+            await fetch(`/api/buyer/chat-session?sessionId=${id}`, { method: "DELETE" });
+            setChatHistory(prev => prev.filter(h => h.id !== id));
         } catch { /* ignore */ }
     };
 
-    // Load existing session if sessionId is provided
+    // Load existing session if sessionId is provided — skip questionnaire
     useEffect(() => {
-        if (sessionIdFromUrl && authChecked && user) {
-            loadExistingSession(sessionIdFromUrl);
+        if (sessionIdFromUrl) {
+            setShowQuestionnaire(false);
+            if (authChecked && user) {
+                loadExistingSession(sessionIdFromUrl);
+            }
         }
     }, [sessionIdFromUrl, authChecked, user]);
 
     const loadExistingSession = async (sessionId: string) => {
         try {
-            const res = await fetch(`/api/chat/session?id=${sessionId}`);
+            const res = await fetch(`/api/buyer/chat-session?sessionId=${sessionId}`);
+            if (!res.ok) return;
             const data = await res.json();
             if (data.success && data.session) {
-                // Load requirements from session
                 setRequirements({
                     location: data.session.location || "",
                     category: data.session.category || "",
                     quantity: data.session.quantity || "",
                     budget: data.session.budget || "",
                 });
-                // Load messages from session
                 if (data.session.messages && data.session.messages.length > 0) {
                     const loadedMessages: Message[] = data.session.messages.map((msg: { role: string; content: string; createdAt: string }, idx: number) => ({
                         id: idx + 1,
@@ -268,8 +300,16 @@ function ChatContent() {
                         timestamp: new Date(msg.createdAt),
                     }));
                     setMessages(loadedMessages);
+                } else {
+                    // Session exists but no messages — show welcome
+                    const locationName = data.session.location || "your area";
+                    setMessages([{
+                        id: 1,
+                        role: "assistant",
+                        content: `Welcome back! This was your search for suppliers in ${locationName}. Send a message to continue.`,
+                        timestamp: new Date(),
+                    }]);
                 }
-                // Skip questionnaire since we're resuming
                 setShowQuestionnaire(false);
                 setCurrentSessionId(sessionId);
             }
@@ -432,15 +472,36 @@ function ChatContent() {
     };
 
     const startChat = async (reqs: UserRequirements) => {
-        // Save chat session to database
+        // Save chat session to database and capture session ID
         try {
-            await fetch("/api/buyer/chat-session", {
+            const sessionRes = await fetch("/api/buyer/chat-session", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                     location: reqs.location,
+                    category: reqs.category,
+                    quantity: reqs.quantity,
+                    budget: reqs.budget,
+                    title: reqs.category ? reqs.category.substring(0, 30) : "New Search",
                 }),
             });
+            const sessionData = await sessionRes.json();
+            if (sessionData.success && sessionData.sessionId) {
+                setCurrentSessionId(sessionData.sessionId);
+                fetchChatHistory();
+
+                // Save the initial greeting message to DB
+                const locationName = reqs.location || "your area";
+                const greetingContent = `Welcome! I'll help you find the best suppliers in ${locationName}.\n\nTo show you the most relevant results, please tell me:\n\nWhat product category do you need? (e.g., Paper Cups, Boxes, Polythene)\nWhat size or capacity? (e.g., 65ml, 250ml, A4 size)\nAny specific features? (e.g., printed, plain, food-grade)\nQuantity needed? (e.g., 1000 pieces, 5000 units)\n\nJust describe your requirements in a single message and I'll find the best matches for you!`;
+                await fetch("/api/buyer/chat-session", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sessionId: sessionData.sessionId,
+                        assistantMessage: greetingContent,
+                    }),
+                });
+            }
         } catch (err) {
             console.error("Failed to save chat session:", err);
         }
@@ -527,6 +588,30 @@ Just describe your requirements in a single message and I'll find the best match
             const data = await response.json();
             setIsTyping(false);
 
+            // Update session title from first user message
+            if (currentSessionId && messages.filter(m => m.role === "user").length === 0) {
+                fetch("/api/buyer/chat-session", {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        title: text.substring(0, 30),
+                    }),
+                }).then(() => fetchChatHistory()).catch(() => { });
+            }
+
+            // Save user message to DB
+            if (currentSessionId) {
+                fetch("/api/buyer/chat-session", {
+                    method: "PUT",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        sessionId: currentSessionId,
+                        userMessage: text,
+                    }),
+                }).catch(() => { });
+            }
+
             // Handle daily limit exceeded - show in chat instead of redirect
             if (data.limitExceeded) {
                 setMessages((prev) => [...prev, {
@@ -545,7 +630,6 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             }
 
             if (data.success) {
-                // Clean markdown and shorten response
                 const cleanResponse = data.response
                     .replace(/\*\*/g, "")
                     .replace(/\*/g, "")
@@ -558,13 +642,21 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     timestamp: new Date(),
                     suppliers: data.suppliers,
                 };
-                setMessages((prev) => {
-                    const updated = [...prev, aiMsg];
-                    saveChatToHistory(updated, requirements);
-                    return updated;
-                });
+                setMessages((prev) => [...prev, aiMsg]);
 
-                // Check if chat should complete (after showing suppliers)
+                // Save assistant message to DB
+                if (currentSessionId) {
+                    fetch("/api/buyer/chat-session", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            sessionId: currentSessionId,
+                            assistantMessage: cleanResponse,
+                            suppliers: data.suppliers,
+                        }),
+                    }).catch(() => { });
+                }
+
                 if (data.hasSuppliers && messages.length >= 4) {
                     setTimeout(() => setChatComplete(true), 5000);
                 }
@@ -575,11 +667,19 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     content: data.response || "Sorry, I couldn't process your request. Please try again.",
                     timestamp: new Date(),
                 };
-                setMessages((prev) => {
-                    const updated = [...prev, errMsg];
-                    saveChatToHistory(updated, requirements);
-                    return updated;
-                });
+                setMessages((prev) => [...prev, errMsg]);
+
+                // Save error response to DB too
+                if (currentSessionId) {
+                    fetch("/api/buyer/chat-session", {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({
+                            sessionId: currentSessionId,
+                            assistantMessage: errMsg.content,
+                        }),
+                    }).catch(() => { });
+                }
             }
         } catch {
             setIsTyping(false);
@@ -594,7 +694,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
 
 
 
-    const handleViewContact = async (supplierId: string): Promise<boolean> => {
+    const handleViewContact = async (supplierId: string): Promise<string | false> => {
         // Check if user has exceeded 3 contacts per chat
         if (contactsViewed >= 3) {
             setShowSubscriptionPrompt(true);
@@ -605,7 +705,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             const res = await fetch("/api/buyer/view-contact", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ supplierId }),
+                body: JSON.stringify({ supplierId, sessionId: currentSessionId }),
             });
 
             const data = await res.json();
@@ -618,7 +718,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
 
             // Increment local counter
             setContactsViewed(prev => prev + 1);
-            return true;
+            return data.phone || "Contact not available";
         } catch (err) {
             console.error("Error logging contact view:", err);
             return false;
@@ -1023,7 +1123,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                                     whiteSpace: "nowrap",
                                                     lineHeight: "1.4"
                                                 }}>
-                                                    {item.category || "General Chat"}
+                                                    {item.title || item.category || "General Chat"}
                                                 </p>
                                                 {item.location && (
                                                     <p style={{ margin: "2px 0 0", fontSize: "10px", color: t.textMuted }}>
@@ -1259,6 +1359,24 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                     </div>
                     <div style={{ display: "flex", gap: "16px", fontSize: "14px", alignItems: "center" }}>
                         <GSTCalculatorButton onClick={() => setShowGSTCalculator(true)} />
+                        <button
+                            onClick={() => setShowHelperGuide(!showHelperGuide)}
+                            style={{
+                                display: "flex", alignItems: "center", gap: "6px",
+                                padding: "8px 14px",
+                                background: showHelperGuide ? "linear-gradient(135deg, #8b5cf6, #6d28d9)" : "linear-gradient(135deg, #3b82f6, #8b5cf6)",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "8px",
+                                fontSize: "12px",
+                                fontWeight: "600",
+                                cursor: "pointer"
+                            }}
+                            title="Ask Chidiya Helper"
+                        >
+                            <Image src="/favicon-32x32.png" alt="" width={16} height={16} style={{ borderRadius: "50%" }} />
+                            {showHelperGuide ? "Close Guide" : "Helper Guide"}
+                        </button>
                         <Link href="/" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Home</Link>
                         <Link href="/account/dashboard" style={{ color: t.textSecondary, textDecoration: "none", fontSize: "13px" }}>Dashboard</Link>
                     </div>
@@ -1315,7 +1433,7 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                         </div>
                                     </div>
 
-                                    {/* Supplier Cards */}
+                                    {/* Supplier Results Table */}
                                     {message.suppliers && message.suppliers.length > 0 && (
                                         <div style={{ marginTop: "16px" }}>
                                             <p style={{
@@ -1326,20 +1444,111 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
                                             }}>
                                                 🎯 Top {message.suppliers.length} Matching Suppliers
                                             </p>
-                                            <div style={{
-                                                display: "grid",
-                                                gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-                                                gap: "12px"
-                                            }}>
-                                                {message.suppliers.map((supplier) => (
-                                                    <SupplierCard
-                                                        key={supplier.id}
-                                                        supplier={supplier}
-                                                        onViewContact={handleViewContact}
-                                                        onSave={handleSaveSupplier}
-                                                        contactsRemaining={3 - contactsViewed}
-                                                    />
-                                                ))}
+                                            <div style={{ overflowX: "auto", borderRadius: "12px", border: `1px solid ${t.border}` }}>
+                                                <table style={{
+                                                    width: "100%",
+                                                    borderCollapse: "collapse",
+                                                    fontSize: "13px",
+                                                    minWidth: "600px"
+                                                }}>
+                                                    <thead>
+                                                        <tr style={{ backgroundColor: darkMode ? "#1e293b" : "#f8fafc" }}>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Company</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>City</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Categories</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>MOQ</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Price</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "left", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Badges</th>
+                                                            <th style={{ padding: "10px 14px", textAlign: "center", color: t.textSecondary, fontWeight: "600", borderBottom: `1px solid ${t.border}`, whiteSpace: "nowrap" }}>Actions</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {message.suppliers.map((supplier) => (
+                                                            <tr key={supplier.id} style={{ borderBottom: `1px solid ${t.border}` }}>
+                                                                <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500" }}>
+                                                                    {supplier.companyName}
+                                                                    {supplier.matchScore && (
+                                                                        <span style={{ display: "block", fontSize: "10px", color: "#22c55e", fontWeight: "400" }}>
+                                                                            {supplier.matchScore}% match
+                                                                        </span>
+                                                                    )}
+                                                                </td>
+                                                                <td style={{ padding: "12px 14px", color: t.textSecondary }}>{supplier.city || "—"}</td>
+                                                                <td style={{ padding: "12px 14px" }}>
+                                                                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                                                        {supplier.productCategories?.slice(0, 2).map((cat, i) => (
+                                                                            <span key={i} style={{
+                                                                                padding: "2px 8px",
+                                                                                backgroundColor: darkMode ? "rgba(59,130,246,0.15)" : "#eff6ff",
+                                                                                color: darkMode ? "#93c5fd" : "#2563eb",
+                                                                                borderRadius: "8px",
+                                                                                fontSize: "11px"
+                                                                            }}>{cat}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </td>
+                                                                <td style={{ padding: "12px 14px", color: t.textSecondary, whiteSpace: "nowrap" }}>{supplier.moq || "—"}</td>
+                                                                <td style={{ padding: "12px 14px", color: t.text, fontWeight: "500", whiteSpace: "nowrap" }}>
+                                                                    {supplier.price ? `₹${supplier.price}${supplier.priceUnit ? `/${supplier.priceUnit}` : ""}` : "—"}
+                                                                </td>
+                                                                <td style={{ padding: "12px 14px" }}>
+                                                                    <div style={{ display: "flex", gap: "4px", flexWrap: "wrap" }}>
+                                                                        {supplier.badges?.slice(0, 2).map((badge, i) => (
+                                                                            <span key={i} style={{
+                                                                                padding: "2px 6px",
+                                                                                backgroundColor: darkMode ? "rgba(34,197,94,0.15)" : "#f0fdf4",
+                                                                                color: darkMode ? "#86efac" : "#16a34a",
+                                                                                borderRadius: "6px",
+                                                                                fontSize: "10px"
+                                                                            }}>{badge}</span>
+                                                                        ))}
+                                                                    </div>
+                                                                </td>
+                                                                <td style={{ padding: "12px 14px", textAlign: "center" }}>
+                                                                    <div style={{ display: "flex", gap: "6px", justifyContent: "center" }}>
+                                                                        <button
+                                                                            onClick={async () => {
+                                                                                const result = await handleViewContact(supplier.id);
+                                                                                if (result) {
+                                                                                    alert(`📞 Contact: ${result}`);
+                                                                                }
+                                                                            }}
+                                                                            style={{
+                                                                                padding: "6px 12px",
+                                                                                backgroundColor: "#3b82f6",
+                                                                                color: "white",
+                                                                                border: "none",
+                                                                                borderRadius: "6px",
+                                                                                fontSize: "11px",
+                                                                                cursor: "pointer",
+                                                                                fontWeight: "500",
+                                                                                whiteSpace: "nowrap"
+                                                                            }}
+                                                                        >
+                                                                            📞 Contact
+                                                                        </button>
+                                                                        <button
+                                                                            onClick={() => handleSaveSupplier(supplier.id)}
+                                                                            style={{
+                                                                                padding: "6px 12px",
+                                                                                backgroundColor: darkMode ? "#334155" : "#f1f5f9",
+                                                                                color: t.textSecondary,
+                                                                                border: `1px solid ${t.border}`,
+                                                                                borderRadius: "6px",
+                                                                                fontSize: "11px",
+                                                                                cursor: "pointer",
+                                                                                fontWeight: "500",
+                                                                                whiteSpace: "nowrap"
+                                                                            }}
+                                                                        >
+                                                                            ⭐ Save
+                                                                        </button>
+                                                                    </div>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
                                             </div>
                                         </div>
                                     )}
@@ -1520,8 +1729,9 @@ To get unlimited searches, subscribe to ChidiyaAI Premium.`,
             {/* GST Calculator Modal */}
             <GSTCalculator isOpen={showGSTCalculator} onClose={() => setShowGSTCalculator(false)} />
 
-            {/* Global Chat Helper Widget */}
-            <GlobalChatWidget />
+            {/* Helper Guide Widget */}
+            {showHelperGuide && <GlobalChatWidget />}
+
 
             <style jsx global>{`
                 @keyframes bounce {

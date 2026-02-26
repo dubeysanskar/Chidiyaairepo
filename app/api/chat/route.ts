@@ -13,7 +13,7 @@ import {
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 
-const DAILY_QUERY_LIMIT = 3;
+const DAILY_QUERY_LIMIT = 5;
 
 interface SupplierResult {
     id: string;
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
                 return NextResponse.json({
                     success: false,
                     limitExceeded: true,
-                    response: "You've reached your daily query limit (3 queries per day). Subscribe for unlimited access!",
+                    response: `You've reached your daily query limit (${DAILY_QUERY_LIMIT} queries per day). Subscribe for unlimited access!`,
                     queriesUsed: queriesToday,
                     limit: DAILY_QUERY_LIMIT,
                 });

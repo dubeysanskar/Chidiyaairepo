@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { MessageCircle, X, Send, ChevronDown, Sparkles, Folder } from "lucide-react";
 
 interface Message {
@@ -182,7 +183,7 @@ export default function GlobalChatWidget() {
                             fontWeight: "500",
                             animation: "slideUp 0.3s ease",
                         }}>
-                            Have doubts? Ask Chidiya! 🐦
+                            <span style={{ display: "flex", alignItems: "center", gap: "6px" }}>Have doubts? Ask Chidiya! <Image src="/favicon-32x32.png" alt="" width={18} height={18} style={{ display: "inline-block", verticalAlign: "middle" }} /></span>
                             <div style={{
                                 position: "absolute",
                                 bottom: "-6px",
@@ -252,13 +253,13 @@ export default function GlobalChatWidget() {
                                 width: "36px",
                                 height: "36px",
                                 borderRadius: "50%",
-                                backgroundColor: "rgba(255,255,255,0.2)",
+                                backgroundColor: "white",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                fontSize: "18px",
+                                overflow: "hidden",
                             }}>
-                                🐦
+                                <Image src="/favicon-32x32.png" alt="ChidiyaAI" width={28} height={28} style={{ borderRadius: "50%" }} />
                             </div>
                             <div>
                                 <div style={{ fontWeight: "600", fontSize: "15px" }}>Chidiya Helper</div>

@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
         }
 
         // Determine limits based on subscription
-        const DAILY_QUERY_LIMIT = buyer.isSubscribed ? 50 : 3;
+        const DAILY_QUERY_LIMIT = buyer.isSubscribed ? 50 : 5;
         const DAILY_CONTACT_LIMIT = buyer.isSubscribed ? 50 : 5;
 
         // Compute searches used today
@@ -107,6 +107,7 @@ export async function GET(request: NextRequest) {
             success: true,
             chatSessions: chatSessions.map(cs => ({
                 id: cs.id,
+                title: cs.title,
                 location: cs.location,
                 category: cs.category,
                 quantity: cs.quantity,

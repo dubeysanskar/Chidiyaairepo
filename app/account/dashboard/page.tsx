@@ -13,6 +13,7 @@ const dateFormatOptions: Intl.DateTimeFormatOptions = {
 
 interface ChatSession {
     id: string;
+    title: string | null;
     location: string | null;
     category: string | null;
     quantity: string | null;
@@ -270,6 +271,9 @@ export default function BuyerDashboard() {
                                                 alignItems: "center"
                                             }}>
                                                 <div>
+                                                    <p style={{ margin: "0 0 6px", fontSize: "15px", fontWeight: "600", color: "#0f172a" }}>
+                                                        {session.title || session.category || "Search"}
+                                                    </p>
                                                     <div style={{ display: "flex", gap: "8px", marginBottom: "8px", flexWrap: "wrap" }}>
                                                         {session.category && (
                                                             <span style={{

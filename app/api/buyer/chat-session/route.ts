@@ -163,3 +163,115 @@ export async function PATCH(request: NextRequest) {
         );
     }
 }
+
+// PUT — save messages to a chat session
+export async function PUT(request: NextRequest) {
+    try {
+        const session = await getServerSession();
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        const body = await request.json();
+        const { sessionId, userMessage, assistantMessage, suppliers } = body;
+
+        if (!sessionId) {
+            return NextResponse.json({ error: "Session ID required" }, { status: 400 });
+        }
+
+        const buyer = await prisma.buyer.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!buyer) {
+            return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
+        }
+
+        // Verify session belongs to buyer
+        const chatSession = await prisma.chatSession.findFirst({
+            where: { id: sessionId, buyerId: buyer.id },
+        });
+
+        if (!chatSession) {
+            return NextResponse.json({ error: "Session not found" }, { status: 404 });
+        }
+
+        // Save user message
+        if (userMessage) {
+            await prisma.chatMessage.create({
+                data: {
+                    sessionId,
+                    role: "user",
+                    content: userMessage,
+                },
+            });
+        }
+
+        // Save assistant message
+        if (assistantMessage) {
+            const supplierIds = suppliers?.map((s: { id: string }) => s.id) || [];
+            await prisma.chatMessage.create({
+                data: {
+                    sessionId,
+                    role: "assistant",
+                    content: assistantMessage,
+                    hasSuppliers: supplierIds.length > 0,
+                    supplierIds,
+                },
+            });
+        }
+
+        // Update session timestamp
+        await prisma.chatSession.update({
+            where: { id: sessionId },
+            data: { updatedAt: new Date() },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Save message error:", error);
+        return NextResponse.json(
+            { error: "Failed to save message" },
+            { status: 500 }
+        );
+    }
+}
+
+// DELETE — delete a chat session
+export async function DELETE(request: NextRequest) {
+    try {
+        const session = await getServerSession();
+        if (!session?.user?.email) {
+            return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
+        }
+
+        const { searchParams } = new URL(request.url);
+        const sessionId = searchParams.get("sessionId");
+
+        if (!sessionId) {
+            return NextResponse.json({ error: "Session ID required" }, { status: 400 });
+        }
+
+        const buyer = await prisma.buyer.findUnique({
+            where: { email: session.user.email },
+        });
+
+        if (!buyer) {
+            return NextResponse.json({ error: "Buyer not found" }, { status: 404 });
+        }
+
+        // Delete session (messages cascade delete via schema)
+        await prisma.chatSession.deleteMany({
+            where: { id: sessionId, buyerId: buyer.id },
+        });
+
+        return NextResponse.json({ success: true });
+    } catch (error) {
+        console.error("Delete session error:", error);
+        return NextResponse.json(
+            { error: "Failed to delete session" },
+            { status: 500 }
+        );
+    }
+}
+
