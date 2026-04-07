@@ -5,7 +5,7 @@ import { sendOTPEmail, generateOTP } from "@/lib/email"
 // Send OTP for email verification
 export async function POST(request: NextRequest) {
     try {
-        const { email, action } = await request.json()
+        const { email } = await request.json()
 
         if (!email) {
             return NextResponse.json(
@@ -24,40 +24,6 @@ export async function POST(request: NextRequest) {
                 { error: "Account not found" },
                 { status: 404 }
             )
-        }
-
-        if (action === 'verify') {
-            // Verify OTP
-            const { otp } = await request.json()
-
-            if (buyer.verificationOTP !== otp) {
-                return NextResponse.json(
-                    { error: "Invalid OTP" },
-                    { status: 400 }
-                )
-            }
-
-            if (buyer.otpExpiry && new Date() > buyer.otpExpiry) {
-                return NextResponse.json(
-                    { error: "OTP has expired. Please request a new one." },
-                    { status: 400 }
-                )
-            }
-
-            // Mark email as verified
-            await prisma.buyer.update({
-                where: { id: buyer.id },
-                data: {
-                    emailVerified: true,
-                    verificationOTP: null,
-                    otpExpiry: null
-                }
-            })
-
-            return NextResponse.json({
-                success: true,
-                message: "Email verified successfully!"
-            })
         }
 
         // Generate and send OTP
