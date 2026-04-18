@@ -6,6 +6,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import dynamic from "next/dynamic";
 import Navbar from "@/app/components/ui/navbar";
 import GlobalChatWidget from "@/app/components/GlobalChatWidget";
+import VideoPlayer from "@/app/components/ui/VideoPlayer";
 import { useIsMobile } from "@/app/hooks/useIsMobile";
 
 // Dynamic imports for heavy components (bundle-dynamic-imports)
@@ -532,27 +533,20 @@ export default function Home() {
             <div style={{
               backgroundColor: "white",
               borderRadius: "20px",
-              padding: "24px",
               boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-              height: isMobile ? "200px" : "400px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              overflow: "hidden",
               order: isMobile ? -1 : 0
             }}>
-              <div style={{
-                backgroundColor: "#f1f5f9",
-                borderRadius: "16px",
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#94a3b8",
-                fontSize: "16px"
-              }}>
-                [Agent Mode Demo - Email Notifications]
-              </div>
+              <img
+                src="/images/agent-mode-demo.png"
+                alt="Agent Mode - AI-powered deal notifications delivered to your inbox"
+                style={{
+                  width: "100%",
+                  height: isMobile ? "220px" : "400px",
+                  objectFit: "cover",
+                  display: "block"
+                }}
+              />
             </div>
           </div>
 
@@ -566,26 +560,20 @@ export default function Home() {
             <div style={{
               backgroundColor: "white",
               borderRadius: "20px",
-              padding: "24px",
               boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-              height: isMobile ? "200px" : "400px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center"
+              overflow: "hidden"
             }}>
-              <div style={{
-                backgroundColor: "#f1f5f9",
-                borderRadius: "16px",
-                width: "100%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#94a3b8",
-                fontSize: isMobile ? "14px" : "16px"
-              }}>
-                [Chat Mode Demo - AI Conversation]
-              </div>
+              <img
+                src="/images/chat-mode-demo.png"
+                alt="Chat Mode - AI conversation to find verified suppliers"
+                style={{
+                  width: "100%",
+                  height: isMobile ? "220px" : "400px",
+                  objectFit: "cover",
+                  objectPosition: "top",
+                  display: "block"
+                }}
+              />
             </div>
             <div style={{ padding: isMobile ? "20px" : "40px" }}>
               <div style={{
@@ -654,31 +642,62 @@ export default function Home() {
             Watch how businesses find verified suppliers in under 2 minutes
           </p>
 
-          {/* Video Embed Placeholder */}
-          <div style={{
-            backgroundColor: "#1e293b",
-            borderRadius: "16px",
-            aspectRatio: "16/9",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            border: "1px solid #334155"
-          }}>
-            <div style={{ textAlign: "center" }}>
-              <div style={{
-                width: "80px",
-                height: "80px",
-                borderRadius: "50%",
-                backgroundColor: "#3b82f6",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                margin: "0 auto 16px",
-                cursor: "pointer"
-              }}>
-                <span style={{ fontSize: "32px", color: "white", marginLeft: "6px" }}>▶</span>
+          {/* Two videos side-by-side */}
+          <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: "24px", maxWidth: "800px", margin: "0 auto" }}>
+            {/* Hindi Version */}
+            <div>
+              <div style={{ textAlign: "center", marginBottom: "10px" }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 16px",
+                  background: "rgba(59,130,246,0.15)",
+                  borderRadius: "20px",
+                  color: "#60a5fa",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  border: "1px solid rgba(96,165,250,0.2)"
+                }}>
+                  🇮🇳 Listen in Hindi
+                </span>
               </div>
-              <p style={{ color: "#64748b", fontSize: "14px" }}>[YouTube Video Embed Placeholder]</p>
+              <VideoPlayer
+                src="/videos/hindi.mp4"
+                poster="/images/video-thumbnail.png"
+                containerStyle={{
+                  border: "1px solid rgba(59,130,246,0.2)",
+                  boxShadow: "0 0 24px rgba(59,130,246,0.1), 0 8px 32px rgba(0,0,0,0.2)",
+                }}
+              />
+            </div>
+
+            {/* English Version */}
+            <div>
+              <div style={{ textAlign: "center", marginBottom: "10px" }}>
+                <span style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: "6px",
+                  padding: "6px 16px",
+                  background: "rgba(99,102,241,0.15)",
+                  borderRadius: "20px",
+                  color: "#a5b4fc",
+                  fontSize: "13px",
+                  fontWeight: "600",
+                  border: "1px solid rgba(165,180,252,0.2)"
+                }}>
+                  🌐 Listen in English
+                </span>
+              </div>
+              <VideoPlayer
+                src="/videos/ChidiyaAIengad.mp4"
+                poster="/images/video-thumbnail.png"
+                containerStyle={{
+                  border: "1px solid rgba(99,102,241,0.2)",
+                  boxShadow: "0 0 24px rgba(99,102,241,0.1), 0 8px 32px rgba(0,0,0,0.2)",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -750,19 +769,14 @@ export default function Home() {
                 <span>→</span>
               </Link>
             </div>
-            <div style={{
-              backgroundColor: "white",
-              borderRadius: "20px",
-              height: isMobile ? "200px" : "400px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
-              color: "#94a3b8",
-              fontSize: isMobile ? "14px" : "16px"
-            }}>
-              [Product Discovery Image Placeholder]
-            </div>
+            <VideoPlayer
+              src="/videos/ChidiyaAI.mp4"
+              poster="/images/simplify-thumbnail.png"
+              containerStyle={{
+                borderRadius: "20px",
+                boxShadow: "0 20px 60px rgba(0,0,0,0.1)",
+              }}
+            />
           </div>
         </div>
       </section>
@@ -781,44 +795,92 @@ export default function Home() {
 
           <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: "24px" }}>
             {[
-              { name: "Rajesh Kumar", role: "Owner, TechFab Industries", quote: "ChidiyaAI helped us find verified suppliers 10x faster. Saved us ₹3 lakh in the first month!" },
-              { name: "Priya Sharma", role: "Procurement, Sharma Textiles", quote: "The AI matching is incredible. We get exactly what we need, with verified GST suppliers only." },
-              { name: "Amit Patel", role: "Director, Green Earth Exports", quote: "Chidi understands our requirements perfectly. It's like having a dedicated sourcing team 24/7." }
+              { name: "Rajesh Kumar", role: "Owner, TechFab Industries", quote: "ChidiyaAI helped us find verified suppliers 10x faster. Saved us ₹3 lakh in the first month!", image: "/images/testimonial-rajesh.png", savings: "₹3L saved" },
+              { name: "Priya Sharma", role: "Procurement, Sharma Textiles", quote: "The AI matching is incredible. We get exactly what we need, with verified GST suppliers only.", image: "/images/testimonial-priya.png", savings: "50% faster" },
+              { name: "Amit Patel", role: "Director, Green Earth Exports", quote: "Chidi understands our requirements perfectly. It's like having a dedicated sourcing team 24/7.", image: "/images/testimonial-amit.png", savings: "24/7 access" }
             ].map((t, i) => (
               <div key={i} style={{
                 backgroundColor: "#f8fafc",
                 borderRadius: "16px",
-                overflow: "hidden"
+                overflow: "hidden",
+                border: "1px solid #e2e8f0",
+                transition: "transform 0.3s ease, box-shadow 0.3s ease"
               }}>
-                {/* Video Placeholder */}
-                <div style={{
-                  backgroundColor: "#1e293b",
-                  aspectRatio: "9/12",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  position: "relative"
-                }}>
+                {/* Testimonial Portrait */}
+                <div style={{ position: "relative" }}>
+                  <img
+                    src={t.image}
+                    alt={`${t.name} - ${t.role}`}
+                    style={{
+                      width: "100%",
+                      height: isMobile ? "280px" : "320px",
+                      objectFit: "cover",
+                      display: "block"
+                    }}
+                  />
+                  {/* Gradient overlay */}
                   <div style={{
-                    width: "60px",
-                    height: "60px",
-                    borderRadius: "50%",
-                    backgroundColor: "rgba(255,255,255,0.2)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    cursor: "pointer"
+                    position: "absolute",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: "80px",
+                    background: "linear-gradient(transparent, rgba(0,0,0,0.4))",
+                    pointerEvents: "none"
+                  }} />
+                  {/* Savings badge */}
+                  <span style={{
+                    position: "absolute",
+                    top: "12px",
+                    right: "12px",
+                    padding: "4px 12px",
+                    background: "rgba(16,185,129,0.9)",
+                    color: "white",
+                    borderRadius: "8px",
+                    fontSize: "12px",
+                    fontWeight: "600",
+                    backdropFilter: "blur(8px)"
                   }}>
-                    <span style={{ fontSize: "24px", color: "white", marginLeft: "4px" }}>▶</span>
-                  </div>
-                  <p style={{ position: "absolute", bottom: "12px", left: "12px", right: "12px", color: "#94a3b8", fontSize: "12px" }}>
-                    [YouTube Shorts Placeholder]
-                  </p>
+                    {t.savings}
+                  </span>
+                  {/* Verified badge */}
+                  <span style={{
+                    position: "absolute",
+                    top: "12px",
+                    left: "12px",
+                    padding: "4px 10px",
+                    background: "rgba(59,130,246,0.9)",
+                    color: "white",
+                    borderRadius: "8px",
+                    fontSize: "11px",
+                    fontWeight: "600",
+                    backdropFilter: "blur(8px)"
+                  }}>
+                    ✓ Verified
+                  </span>
                 </div>
                 <div style={{ padding: "20px" }}>
-                  <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px", lineHeight: "1.6" }}>"{t.quote}"</p>
-                  <div style={{ fontWeight: "600", color: "#0f172a" }}>{t.name}</div>
-                  <div style={{ fontSize: "13px", color: "#64748b" }}>{t.role}</div>
+                  {/* Star rating */}
+                  <div style={{ marginBottom: "10px" }}>
+                    {[1,2,3,4,5].map(s => (
+                      <span key={s} style={{ color: "#f59e0b", fontSize: "15px", marginRight: "1px" }}>★</span>
+                    ))}
+                  </div>
+                  <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px", lineHeight: "1.6", fontStyle: "italic" }}>"{t.quote}"</p>
+                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{
+                      width: "36px", height: "36px", borderRadius: "50%",
+                      background: "linear-gradient(135deg, #3b82f6, #6366f1)",
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      color: "white", fontWeight: "700", fontSize: "14px"
+                    }}>
+                      {t.name[0]}
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: "600", color: "#0f172a", fontSize: "14px" }}>{t.name}</div>
+                      <div style={{ fontSize: "12px", color: "#64748b" }}>{t.role}</div>
+                    </div>
+                  </div>
                 </div>
               </div>
             ))}

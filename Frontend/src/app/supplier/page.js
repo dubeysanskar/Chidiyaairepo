@@ -204,6 +204,77 @@ export default function SupplierLanding() {
                 </div>
             </section>
 
+            {/* Video Demo */}
+            <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "white" }}>
+                <div style={{ maxWidth: "800px", margin: "0 auto" }}>
+                    <div style={{ textAlign: "center", marginBottom: "40px" }}>
+                        <span style={{
+                            display: "inline-block",
+                            padding: "8px 18px",
+                            background: "linear-gradient(135deg, rgba(59,130,246,0.1), rgba(99,102,241,0.08))",
+                            color: "#3b82f6",
+                            borderRadius: "24px",
+                            fontSize: "13px",
+                            fontWeight: "600",
+                            marginBottom: "16px",
+                            border: "1px solid rgba(59,130,246,0.15)"
+                        }}>
+                            🎬 Video Guide
+                        </span>
+                        <h2 style={{ fontSize: isMobile ? "24px" : "32px", fontWeight: "bold", color: "#0f172a", marginBottom: "12px" }}>
+                            Watch: How to Register as a Supplier
+                        </h2>
+                        <p style={{ fontSize: isMobile ? "14px" : "16px", color: "#64748b", maxWidth: "600px", margin: "0 auto" }}>
+                            Follow this step-by-step video walkthrough to complete your supplier registration on ChidiyaAI.
+                        </p>
+                    </div>
+
+                    <div style={{
+                        borderRadius: "20px",
+                        overflow: "hidden",
+                        border: "1px solid #e2e8f0",
+                        boxShadow: "0 20px 60px rgba(0,0,0,0.1), 0 0 30px rgba(59,130,246,0.06)",
+                        backgroundColor: "#000"
+                    }}>
+                        <div style={{ position: "relative", paddingBottom: "56.25%", height: 0 }}>
+                            <iframe
+                                src="https://www.youtube.com/embed/3npRaHhZ7PA?si=-YPdX3QgD9nt9Jub"
+                                title="ChidiyaAI Supplier Registration Guide"
+                                frameBorder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                                referrerPolicy="strict-origin-when-cross-origin"
+                                allowFullScreen
+                                style={{
+                                    position: "absolute",
+                                    top: 0,
+                                    left: 0,
+                                    width: "100%",
+                                    height: "100%",
+                                    border: "none"
+                                }}
+                            />
+                        </div>
+                    </div>
+
+                    <div style={{ textAlign: "center", marginTop: "24px" }}>
+                        <Link href="/supplier/register" style={{
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "8px",
+                            background: "linear-gradient(135deg, #3b82f6, #2563eb)",
+                            color: "white",
+                            padding: "14px 32px",
+                            borderRadius: "12px",
+                            textDecoration: "none",
+                            fontWeight: "600",
+                            fontSize: "16px",
+                            boxShadow: "0 8px 24px rgba(59,130,246,0.3)"
+                        }}>
+                            Register Now <span>→</span>
+                        </Link>
+                    </div>
+                </div>
+            </section>
             {/* CTA */}
             <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "#0f172a", textAlign: "center" }}>
                 <div style={{ maxWidth: "600px", margin: "0 auto" }}>
