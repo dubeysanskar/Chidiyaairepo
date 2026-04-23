@@ -112,6 +112,24 @@ export default function SupplierRegister() {
             setError("Please fill all required fields");
             return;
         }
+
+        // Email validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+        if (!emailRegex.test(formData.email)) {
+            setError("Please enter a valid email address (e.g. company@example.com)");
+            return;
+        }
+
+        // Phone validation — must be 10 digits (Indian mobile)
+        const phoneDigits = formData.phone.replace(/\D/g, "");
+        const cleanPhone = phoneDigits.startsWith("91") && phoneDigits.length === 12
+            ? phoneDigits.slice(2)
+            : phoneDigits;
+        if (cleanPhone.length !== 10 || !/^[6-9]\d{9}$/.test(cleanPhone)) {
+            setError("Please enter a valid 10-digit Indian phone number");
+            return;
+        }
+
         if (formData.password.length < 6) {
             setError("Password must be at least 6 characters");
             return;

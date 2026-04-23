@@ -116,67 +116,64 @@ export default function SupplierLanding() {
                 )}
             </nav>
 
-            {/* Hero */}
-            <section style={{
-                padding: isMobile ? "60px 16px" : "100px 24px",
-                background: "linear-gradient(180deg, #0f172a 0%, #1e293b 100%)",
-                textAlign: "center"
-            }}>
-                <div style={{ maxWidth: "800px", margin: "0 auto" }}>
-                    <span style={{
-                        display: "inline-block",
-                        padding: "6px 16px",
-                        backgroundColor: "rgba(59,130,246,0.2)",
-                        color: "#60a5fa",
-                        borderRadius: "20px",
-                        fontSize: "14px",
-                        marginBottom: "24px"
-                    }}>
-                        For Verified Suppliers
-                    </span>
-                    <h1 style={{ fontSize: isMobile ? "32px" : "48px", fontWeight: "bold", color: "white", marginBottom: "20px", lineHeight: "1.2" }}>
-                        Become a Verified Partner at ChidiyaAI
-                    </h1>
-                    <p style={{ fontSize: isMobile ? "16px" : "20px", color: "#94a3b8", marginBottom: "16px", lineHeight: "1.6" }}>
-                        Get access to quality leads from verified buyers. No spam, no fake inquiries — only AI-validated business opportunities.
-                    </p>
-                    <div style={{
-                        display: "inline-block",
-                        padding: "10px 20px",
-                        backgroundColor: "rgba(34,197,94,0.2)",
-                        color: "#4ade80",
-                        borderRadius: "8px",
-                        fontSize: "16px",
-                        fontWeight: "600",
-                        marginBottom: "32px"
-                    }}>
-                        🎉 Free for 3 months, then subscribe for Pro plan
+            {/* Hero — Two Column Layout */}
+            <section style={{ padding: isMobile ? "40px 16px" : "80px 24px", backgroundColor: "#f8fafc" }}>
+                <div style={{ maxWidth: "1100px", margin: "0 auto", display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: isMobile ? "32px" : "60px", alignItems: "center" }}>
+                    {/* Left — Chat Mockup */}
+                    <div style={{ backgroundColor: "white", borderRadius: "20px", padding: isMobile ? "20px" : "28px", boxShadow: "0 20px 60px rgba(0,0,0,0.08)", border: "1px solid #e2e8f0", order: isMobile ? 1 : 0 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "20px" }}>
+                            <span style={{ fontSize: "20px" }}>🐦</span>
+                            <span style={{ fontWeight: "700", fontSize: "16px", color: "#0f172a" }}>ChidiyaAI</span>
+                        </div>
+                        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "12px" }}>
+                            <div style={{ backgroundColor: "#3b82f6", color: "white", padding: "10px 16px", borderRadius: "16px 16px 4px 16px", fontSize: "13px", maxWidth: "80%" }}>
+                                I need corrugated box suppliers in Mumbai, MOQ 5000
+                            </div>
+                        </div>
+                        <div style={{ textAlign: "right", fontSize: "11px", color: "#94a3b8", marginBottom: "16px" }}>Time: 10:32 AM</div>
+                        <div style={{ backgroundColor: "#f8fafc", borderRadius: "12px", padding: "16px", border: "1px solid #e2e8f0" }}>
+                            <p style={{ fontWeight: "600", fontSize: "14px", color: "#0f172a", marginBottom: "12px" }}>Found 12 new buyer inquiries today!</p>
+                            {[
+                                { name: "Buycorr Pvt Ltd (Mumbai)", qty: "5000 pieces", time: "10:15 AM" },
+                                { name: "Pack Rite Traders (Delhi)", qty: "3000 pieces", time: "09:48 AM" },
+                                { name: "EcoPack Solutions (Pune)", qty: "8000 pieces", time: "09:20 AM" }
+                            ].map((item, i) => (
+                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderTop: i > 0 ? "1px solid #e2e8f0" : "none" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                                        <span style={{ width: "28px", height: "28px", borderRadius: "50%", backgroundColor: "#eff6ff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px" }}>🏢</span>
+                                        <div>
+                                            <div style={{ fontSize: "13px", fontWeight: "600", color: "#0f172a" }}>{item.name}</div>
+                                            <div style={{ fontSize: "11px", color: "#64748b" }}>{item.qty} <span style={{ backgroundColor: "#dcfce7", color: "#166534", padding: "1px 6px", borderRadius: "4px", fontSize: "10px", fontWeight: "600", marginLeft: "4px" }}>High Match</span></div>
+                                        </div>
+                                    </div>
+                                    <span style={{ fontSize: "11px", color: "#94a3b8" }}>{item.time}</span>
+                                </div>
+                            ))}
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "12px", paddingTop: "12px", borderTop: "1px solid #e2e8f0" }}>
+                                <span style={{ fontSize: "12px", color: "#64748b" }}>Total inquiries today: <strong>12</strong></span>
+                                <span style={{ fontSize: "12px", color: "#3b82f6", fontWeight: "600" }}>View All →</span>
+                            </div>
+                        </div>
                     </div>
-                    <div style={{ display: "flex", gap: "16px", justifyContent: "center", flexDirection: isMobile ? "column" : "row" }}>
-                        <Link href="/supplier/register" style={{
-                            backgroundColor: "#3b82f6",
-                            color: "white",
-                            padding: isMobile ? "14px 24px" : "16px 32px",
-                            borderRadius: "8px",
-                            textDecoration: "none",
-                            fontWeight: "500",
-                            fontSize: "16px",
-                            textAlign: "center"
-                        }}>
-                            Register as Supplier
-                        </Link>
-                        <Link href="/supplier/login" style={{
-                            backgroundColor: "transparent",
-                            color: "white",
-                            padding: isMobile ? "14px 24px" : "16px 32px",
-                            borderRadius: "8px",
-                            textDecoration: "none",
-                            fontWeight: "500",
-                            fontSize: "16px",
-                            border: "1px solid #475569",
-                            textAlign: "center"
-                        }}>
-                            Sign in
+                    {/* Right — CTA */}
+                    <div>
+                        <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", padding: "6px 14px", backgroundColor: "#eff6ff", color: "#3b82f6", borderRadius: "20px", fontSize: "13px", fontWeight: "600", marginBottom: "20px", border: "1px solid #bfdbfe" }}>🏪 SELLER MODE</span>
+                        <h1 style={{ fontSize: isMobile ? "32px" : "44px", fontWeight: "800", color: "#0f172a", lineHeight: "1.15", marginBottom: "16px" }}>
+                            Get found. Grow your business.
+                        </h1>
+                        <p style={{ fontSize: "16px", color: "#64748b", lineHeight: "1.7", marginBottom: "24px" }}>
+                            Join thousands of verified sellers already receiving quality inquiries from serious buyers every day.
+                        </p>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "12px", marginBottom: "32px" }}>
+                            {["Receive verified buyer inquiries", "Showcase your products & pricing", "Grow your business, 24/7"].map((t, i) => (
+                                <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                    <span style={{ width: "22px", height: "22px", borderRadius: "50%", backgroundColor: "#dcfce7", color: "#16a34a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "12px", flexShrink: 0 }}>✓</span>
+                                    <span style={{ fontSize: "15px", color: "#334155" }}>{t}</span>
+                                </div>
+                            ))}
+                        </div>
+                        <Link href="/supplier/register" style={{ display: "inline-flex", alignItems: "center", gap: "8px", backgroundColor: "#0f172a", color: "white", padding: "16px 32px", borderRadius: "10px", textDecoration: "none", fontWeight: "600", fontSize: "16px" }}>
+                            Register as Seller <span>→</span>
                         </Link>
                     </div>
                 </div>
@@ -359,8 +356,65 @@ export default function SupplierLanding() {
                 </div>
             </section>
 
+            {/* Proven Performance — Stats */}
+            <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "white" }}>
+                <div style={{ maxWidth: "900px", margin: "0 auto", textAlign: "center" }}>
+                    <h2 style={{ fontSize: isMobile ? "28px" : "36px", fontWeight: "800", color: "#0f172a", marginBottom: "8px" }}>Proven Performance</h2>
+                    <p style={{ color: "#64748b", marginBottom: "48px" }}>Growing every day with businesses like yours</p>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "repeat(2, 1fr)" : "repeat(4, 1fr)", gap: "32px" }}>
+                        {[
+                            { value: "500+", label: "Verified Suppliers" },
+                            { value: "2000+", label: "Successful Matches" },
+                            { value: "₹25L+", label: "Buyer Savings" },
+                            { value: "95%", label: "Satisfaction Rate" }
+                        ].map((s, i) => (
+                            <div key={i}>
+                                <div style={{ fontSize: isMobile ? "36px" : "48px", fontWeight: "800", color: "#3b82f6", marginBottom: "8px" }}>{s.value}</div>
+                                <div style={{ color: "#64748b", fontSize: "14px" }}>{s.label}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
 
-            {/* CTA */}
+            {/* What Our Sellers Say — Testimonials */}
+            <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "#f8fafc" }}>
+                <div style={{ maxWidth: "1000px", margin: "0 auto" }}>
+                    <div style={{ textAlign: "center", marginBottom: "48px" }}>
+                        <h2 style={{ fontSize: isMobile ? "28px" : "36px", fontWeight: "800", color: "#0f172a", marginBottom: "12px" }}>What Our Sellers Say</h2>
+                        <p style={{ color: "#64748b", fontSize: "16px" }}>Real sellers, real growth</p>
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: "24px" }}>
+                        {[
+                            { name: "Vikram Mehta", role: "Owner, Mehta Packaging Co.", quote: "ChidiyaAI helped my business grow 2x in just 3 months! The quality of buyer leads is unmatched — every inquiry is genuine.", image: "/images/seller-testimonial-1.png", badge: "2x growth" },
+                            { name: "Sneha Joshi", role: "Director, Joshi Textiles", quote: "We went from 10 inquiries per month to 50+. The AI matching is a game-changer for suppliers like us.", image: "/images/seller-testimonial-2.png", badge: "5x leads" },
+                            { name: "Ramesh Agarwal", role: "MD, Agarwal Industries", quote: "As a small manufacturer, getting verified buyer leads was impossible before ChidiyaAI. Now we close deals every week.", image: "/images/seller-testimonial-3.png", badge: "Weekly deals" }
+                        ].map((t, i) => (
+                            <div key={i} style={{ backgroundColor: "white", borderRadius: "16px", overflow: "hidden", border: "1px solid #e2e8f0", transition: "transform 0.3s, box-shadow 0.3s" }}>
+                                <div style={{ position: "relative" }}>
+                                    <img src={t.image} alt={t.name} style={{ width: "100%", height: isMobile ? "280px" : "320px", objectFit: "cover", display: "block" }} />
+                                    <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "80px", background: "linear-gradient(transparent, rgba(0,0,0,0.4))", pointerEvents: "none" }} />
+                                    <span style={{ position: "absolute", top: "12px", left: "12px", padding: "4px 10px", background: "rgba(59,130,246,0.9)", color: "white", borderRadius: "8px", fontSize: "11px", fontWeight: "600" }}>✓ Verified</span>
+                                    <span style={{ position: "absolute", top: "12px", right: "12px", padding: "4px 12px", background: "rgba(16,185,129,0.9)", color: "white", borderRadius: "8px", fontSize: "12px", fontWeight: "600" }}>{t.badge}</span>
+                                </div>
+                                <div style={{ padding: "20px" }}>
+                                    <div style={{ marginBottom: "10px" }}>{[1,2,3,4,5].map(s => <span key={s} style={{ color: "#f59e0b", fontSize: "15px", marginRight: "1px" }}>★</span>)}</div>
+                                    <p style={{ fontSize: "14px", color: "#475569", marginBottom: "16px", lineHeight: "1.6", fontStyle: "italic" }}>&ldquo;{t.quote}&rdquo;</p>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                                        <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "linear-gradient(135deg, #3b82f6, #6366f1)", display: "flex", alignItems: "center", justifyContent: "center", color: "white", fontWeight: "700", fontSize: "14px" }}>{t.name[0]}</div>
+                                        <div>
+                                            <div style={{ fontWeight: "600", color: "#0f172a", fontSize: "14px" }}>{t.name}</div>
+                                            <div style={{ fontSize: "12px", color: "#64748b" }}>{t.role}</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+
             <section style={{ padding: isMobile ? "60px 16px" : "80px 24px", backgroundColor: "#0f172a", textAlign: "center" }}>
                 <div style={{ maxWidth: "600px", margin: "0 auto" }}>
                     <h2 style={{ fontSize: isMobile ? "24px" : "32px", fontWeight: "bold", color: "white", marginBottom: "16px" }}>

@@ -552,3 +552,49 @@ model SupplierRating {
   @@unique([supplierId, buyerId])
   @@map("supplier_ratings")
 }
+
+// ============================================
+// BLOG MODELS
+// ============================================
+
+model Blog {
+  id                       String      @id @default(uuid())
+  slug                     String      @unique
+  title                    String
+  titleSecondary           String?
+  excerpt                  String?
+  excerptSecondary         String?
+  content                  String
+  contentSecondary         String?
+  category                 String?
+  postType                 String      @default("normal") // normal, carousel, video
+  published                Boolean     @default(false)
+  coverImage               String?
+  metaTitle                String?
+  metaDescription          String?
+  metaKeywords             String?
+  metaTitleSecondary       String?
+  metaDescriptionSecondary String?
+  metaKeywordsSecondary    String?
+  canonicalUrl             String?
+  createdAt                DateTime    @default(now())
+  updatedAt                DateTime    @updatedAt
+
+  media BlogMedia[]
+
+  @@map("blogs")
+}
+
+model BlogMedia {
+  id               String  @id @default(uuid())
+  blogId           String
+  mediaUrl         String
+  mediaType        String  @default("image") // image, video
+  sortOrder        Int     @default(0)
+  altText          String?
+  altTextSecondary String?
+
+  blog Blog @relation(fields: [blogId], references: [id], onDelete: Cascade)
+
+  @@map("blog_media")
+}
